@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useEffect } from "react";
+import { useState, useRef, useCallback, useEffect, useMemo } from "react";
 
 // ─── Demo SKU Catalog Database ──────────────────────────────────────────────
 // This simulates a real product catalog / ERP system that extracted items get matched against
@@ -49,6 +49,24 @@ const DEMO_CATALOG = [
   { sku: "FF-BEV-ICET-1L", name: "Peach Iced Tea 1L", category: "Beverages", price: 3.40, uom: "BTL", stock: 580 },
   { sku: "FF-BEV-SMTH-MNG", name: "Mango Smoothie 500ml", category: "Beverages", price: 4.20, uom: "BTL", stock: 320 },
   { sku: "FF-BEV-SMTH-BRY", name: "Mixed Berry Smoothie 500ml", category: "Beverages", price: 4.20, uom: "BTL", stock: 0 },
+  // Dairy & Produce (Fax sample)
+  { sku: "YOG-OMB-6", name: "Organic Mixed Berry Yogurt Cups", category: "Dairy", price: 4.20, uom: "CASE", stock: 1800 },
+  { sku: "TURK-GR1", name: "Free-Range Ground Turkey 1lb", category: "Meat", price: 6.90, uom: "CASE", stock: 540 },
+  { sku: "TURK-GR3", name: "Free-Range Ground Turkey 3lb", category: "Meat", price: 14.50, uom: "CASE", stock: 280 },
+  { sku: "SALSA-FRS-H", name: "Fresh Garden Salsa", category: "Condiments", price: 3.80, uom: "CASE", stock: 920 },
+  { sku: "FF-FRZ-BROC-16", name: "Frozen Broccoli Florets 16oz", category: "Frozen", price: 3.40, uom: "BAG", stock: 1200 },
+  { sku: "FF-CON-JALP-SLC", name: "Sliced Jalapeño Peppers", category: "Condiments", price: 2.90, uom: "JAR", stock: 760 },
+  { sku: "FF-CON-JALP-DIC", name: "Diced Jalapeño Peppers", category: "Condiments", price: 2.90, uom: "JAR", stock: 640 },
+  // Bulk Ingredients (Email sample)
+  { sku: "FF-BLK-OATS-25", name: "Organic Rolled Oats 25kg", category: "Bulk", price: 28.50, uom: "BAG", stock: 320 },
+  { sku: "WW-PEN-5K", name: "Whole Wheat Penne 8kg", category: "Bulk", price: 12.80, uom: "BAG", stock: 450 },
+  { sku: "FF-BLK-SUGR-10", name: "Raw Cane Sugar 10kg", category: "Bulk", price: 15.40, uom: "BAG", stock: 580 },
+  { sku: "FF-OIL-COCO-5L", name: "Coconut Oil Virgin 5L", category: "Oils", price: 22.60, uom: "BTL", stock: 210 },
+  { sku: "FF-BAK-CHOC-BEL", name: "Dark Chocolate Chips Belgian 70% 1kg", category: "Baking", price: 11.90, uom: "BAG", stock: 180 },
+  { sku: "FF-BAK-CHOC-REG", name: "Dark Chocolate Chips Regular 70% 1kg", category: "Baking", price: 8.40, uom: "BAG", stock: 340 },
+  // Deli & Cheese (Chat sample)
+  { sku: "FF-DIP-SPIN-400", name: "Spinach & Feta Dip 400g", category: "Dips", price: 4.80, uom: "TUB", stock: 380 },
+  { sku: "FF-CHZ-SWIS-2K5", name: "Sliced Swiss Cheese 2.5kg bulk", category: "Cheese", price: 18.90, uom: "PK", stock: 120 },
 ];
 
 function matchSkuToCatalog(extractedItem) {
@@ -113,27 +131,32 @@ const SAMPLE_ORDERS = [
   {
     id: "fax", label: "Blurry Fax PO", icon: "📠",
     description: "Handwritten PO with smudged quantities and corrections",
-    content: `PURCHASE ORDER — FAX TRANSMISSION\nFrom: Rosie's Diner\nTo: FreshFoods Manufacturing - Orders Dept\nDate: 11/14/2025\nPO#: RD-2025-0847\n\nPlease ship the following to our restaurant at 318 Magnolia Ave, Savannah GA 31401:\n\n  40 jars   Classic Marinara Sauce 500ml     (your part# FF-SAU-MARN-500)\n  24 btl    Balsamic Vinaigrette 350ml       (or your house brand equivalent)\n  60 tubs   Classic Hummus 300g              (I think your SKU is FF-PRE-HUM-CLS??)\n  12 boxes  Straight Cut Fries 2kg           (we usually order the 2kg bags)\n  ???       That mushroom soup we got last time - Carlos at the kitchen knows which one\n\nRUSH — need by 11/22 if possible. Call me at 912-555-0173 if any questions.\n\nSignature: R. Gutierrez\n(handwritten note at bottom: "Actually make the marinara 60 jars not 40 — sorry!")`,
+    image: "/samples/faxorder.png",
+    content: `PURCHASE ORDER — FAX TRANSMISSION\nFrom: GreenHaven Market\nAttn: Sales Department\nDate: 04/26/2025\nPO#: GM-2025-1341\n\nPlease produce and ship the following to our warehouse at 2880 Logistics Rd, Dock 12, Dallas TX 75237:\n\n  250 cases   Organic Mixed Berry Yogurt Cups     (your product # YOG-OMB-6)\n  160 cases   Free-Range Ground Turkey 1 lb packs  (your SKU: TURK-GR1, ok to sub SKU TURK-GR3 if necessary)\n  400 cases   Fresh Garden Salsa                   (your item # SALSA-FRS-H) — No cilantro in this batch please.\n  360 units   Frozen Broccoli Florets 16 oz bags   (please pack in the new 24-unit cases)\n  ??? cases   Sliced Jalapeño Peppers              (same diced jalapeños we ordered last month—Rick knows the size and pack)\n\nRUSH — need by 5/3 if possible. Call me at 972-555-0138 if any issues.\n\nColleen Rogers\n\n(handwritten note: "We're running low. Lets bump the turkey order to 160 cases. Thanks!")`,
   },
   {
     id: "email", label: "Buried Email Chain", icon: "✉️",
     description: "Order hidden in a 3-reply email thread",
-    content: `---------- Forwarded message ----------\nFrom: Jennifer Walsh <j.walsh@harborgrille.com>\nTo: orders@freshfoods.com\nDate: Mon, Oct 28, 2025 at 3:42 PM\nSubject: Re: Re: Re: Next month's order + that other thing\n\nHi FreshFoods team,\n\nSorry for the late reply — was out with flu last week.\n\nRe: the invoice dispute on order #HG-9921, I'll loop in our accounts payable, please disregard my earlier email about that.\n\nANYWAY the actual reason I'm writing — here's what we need for the December restock:\n\n- Roasted Tomato Soup 1L x 80 cartons\n- Chicken Noodle Soup 1L x 60 (NOT the broccoli cheddar you sent last time, the CHICKEN NOODLE, product code should be FF-PRE-SOUP-CHK)\n- Caesar Dressing 500ml x 48\n- Brioche Burger Buns 6-pack x 100\n- Garlic Herb Hummus 300g — actually skip this one for now, I need to check with the kitchen first\n- Pepperoni Pizza 12-inch x 72 (if you have the pepperoni back in stock, otherwise the margherita is fine)\n\nDelivery to: Harbor Grille, 45 Wharf Street, Portland ME 04101\n\nNeed this by Dec 5th at the latest — we're prepping for holiday catering season.\n\nCan you also send me the updated price list when you get a chance? No rush on that.\n\nCheers,\nJen\n\nP.S. The tomato soup — actually make that 100 cartons, we're running lower than I thought.`,
+    image: "/samples/emailchain.png",
+    content: `Re: PO for December Restock\n\nFrom: Jen Carter <jen@freshfoods.co.uk>\nTo: sales\nDate: Tue, Nov 12, 7:36 AM\n\nHi team,\n\nHere's what we need for the December restock:\n\n- Organic rolled oats 25kg x 45 (updated qty).\n- Whole wheat penne 8kg x 60 (product code: WW-PEN-5K)\n- Raw cane sugar 10kg x 25\n- Coconut oil virgin 5L x 18\n- Dark chocolate chips 70% 1kg x 30 (Belgian if back in stock)\n\nDelivery to: Brighton Foods Ltd, Unit 12, South Downs Industrial Estate, Lewes Rd, Brighton BN2 4JF\n\nNeed by Dec 5th – Christmas production run.\n\nThanks! Jen\n\n---\n\nFrom: Tom Avery <tom@brightonfoodsale.co.uk>\nDate: Tue, Nov 12, 8:14 AM\n\nHi Jen,\n\nQuick checks:\n- Oats 25kg – confirmed 45 bags\n- Whole wheat penne WW-PEN-5K – confirmed\n- Coconut oil 5L – 18 confirmed\n- Dark choc chips – Belgian: 20 in stock, 10 arriving Mon, OK to split?\n- Raw cane sugar – confirmed\n\nETA for everything: Dec 4–5. Will send draft invoice later today. Cheers, Tom\n\n---\n\nFrom: Jen Carter\nDate: Tue, Nov 12, 8:27 AM\n\nPerfect. Yes please split the chocolate – Belgian 26 + regular 4.\n\nCan we get the invoice early? Accounts needs it by Friday. Thanks, Jen\n\n---\n\nFrom: Tom Avery\nDate: Tue, Nov 12, 9:45 AM\n\nDone – invoice #INV-77821 sent... ETA Dec 4\nBelgian 20 + Regular 10 confirmed.\n\nSee you Thursday for delivery. Tom`,
   },
   {
     id: "pdf", label: "Formal PDF PO", icon: "📑",
     description: "Structured PO with pricing table and totals",
-    content: `═══════════════════════════════════════════════════════════════\n                        PURCHASE ORDER\n═══════════════════════════════════════════════════════════════\n PO Number:    MBG-2025-00342        Date:       2025-11-01\n Vendor:       FreshFoods Mfg        Payment:    Net 30\n═══════════════════════════════════════════════════════════════\n\n BILL TO:                          SHIP TO:\n Maple & Birch Grocery             Maple & Birch Grocery\n 200 Commonwealth Ave              Distribution Center\n Suite 12                          88 Industrial Pkwy\n Boston, MA 02116                  Woburn, MA 01801\n \n Contact: David Chen               Contact: Maria Lopez\n Tel: 617-555-0291                 Tel: 781-555-0184\n\n═══════════════════════════════════════════════════════════════\n LINE | QTY  | UOM  | ITEM / DESCRIPTION              | UNIT $   | EXT $\n═══════════════════════════════════════════════════════════════\n  1   | 200  | JAR  | Classic Marinara Sauce 500ml     | $3.85    | $770.00\n      |      |      | SKU: FF-SAU-MARN-500              |          |\n  2   | 120  | JAR  | Basil Pesto 250ml               | $5.20    | $624.00\n      |      |      | SKU: FF-SAU-PEST-250              |          |\n  3   | 300  | BTL  | Tomato Ketchup 750ml             | $2.90    | $870.00\n      |      |      | SKU: FF-CON-KETCH-750             |          |\n  4   | 150  | BTL  | Buttermilk Ranch Dressing 500ml  | $4.20    | $630.00\n      |      |      | SKU: FF-DRS-RANCH-500             |          |\n  5   | 80   | PK   | Angus Beef Burger Patties 4-pack | $8.90    | $712.00\n      |      |      | SKU: FF-FRZ-BURG-4PK              |          |\n═══════════════════════════════════════════════════════════════\n                                     SUBTOTAL:    $3,606.00\n                                     TAX (6.25%): $225.38\n                                     FREIGHT:     $185.00\n                                     TOTAL:       $4,016.38\n═══════════════════════════════════════════════════════════════\n\n NOTES:\n - Line 1: Please confirm new label design is on these jars.\n - Partial shipments acceptable. Priority on lines 1, 3, and 5.\n - All items must ship by Nov 15, 2025.\n\n Authorized by: David Chen, Procurement Manager`,
+    image: "/samples/pdforder.png",
+    content: `PURCHASE ORDER\n\nPO Number: MBG-2025-00342\nDate: 2025-11-01\nVendor: FreshFoods Mfg\nPayment Terms: Net 30\n\nBILL TO:\nMaple & Birch Grocery\n200 Commonwealth Ave\nSuite 12\nBoston, MA 02116\nContact: David Chen\nTel: 617-555-0291\n\nSHIP TO:\nMaple & Birch Grocery\nDistribution Center\n88 Industrial Pkwy\nWoburn, MA 01801\nContact: Maria Lopez\nTel: 781-555-0184\n\nLine  Qty   UOM   Description                                          Unit $    Ext $\n1     200   JAR   Classic Marinara Sauce 500ml (FF-SAU-MARN-500)         $3.85     $770.00\n2     120   JAR   Basil Pesto 250ml (FF-SAU-PEST-250)                   $5.20     $624.00\n3     300   BTL   Tomato Ketchup 750ml (FF-CON-KETCH-750)               $2.90     $870.00\n4     150   BTL   Buttermilk Ranch Dressing 500ml (FF-DRS-RANCH-500)    $4.20     $630.00\n5     80    PK    Angus Beef Burger Patties 4-pack (FF-FRZ-BURG-4PK)   $8.90     $712.00\n\nSubtotal: $3,606.00\nTax (6.25%): $225.38\nFreight: $185.00\nTOTAL: $4,016.38\n\nNotes:\n- Line 1: Please confirm new label design is on these jars.\n- Partial shipments acceptable. Priority on lines 1, 3, and 5.\n- All items must ship by Nov 15, 2025.\n\nAuthorized by: David Chen, Procurement Manager`,
   },
   {
     id: "excel", label: "Messy Spreadsheet", icon: "📊",
     description: "Headerless Excel with notes in random cells",
-    content: `[Exported from customer's Excel — no column headers, merged cells, notes in random cells]\n\nSunnyside Market - Monthly Reorder — Nov 2025\nContact: Sarah Pham, purchasing@sunnysidemarket.com\n\nsea salt kettle chips 200g,,,,48 bags\nBBQ kettle chips 200g,,,,36 bags\n,,, (this row intentionally blank - ignore)\nroasted red pepper hummus 300g,,,,60 tubs,, "CHECK: is this the new recipe?"\nclassic hummus 300g,,,,80 tubs\nwhole grain mustard 350ml,,,,24 jars\n,,,NOTE: last order of mustard had 3 broken jars - please double check packaging\nbutter croissants 6-pack,,,,40 packs\nflour tortillas 12-inch 12ct,,,,30 packs\n,,,\nmango smoothie 500ml,,,,120 bottles\nmixed berry smoothie 500ml,,,,120 bottles  \ngarlic herb hummus 300g,,,,60 tubs,,  "OUT OF STOCK LAST TIME — please confirm availability"\n\nShip to: Sunnyside Market, 72 Harvest Lane, Portland OR 97205\nPreferred delivery: Nov 18-20\nPO ref: SSM-11-2025-003`,
+    image: "/samples/excelorder.png",
+    content: `Sunnyside Market - Monthly Reorder — Nov 2025\nContact: Sarah Pham, purchasing@sunnysidemarket.com\nVendor: FreshFoods Mfg\nDate: 2025-11-01\nBILL TO: Sunnyside Market\nPayment: Net 30\n\nLINE #  ITEM                              QTY #    UNIT PRICE\n1       sea salt kettle chips 200g         48 bags   $1.99\n2       BBQ kettle chips 200g              36 bags   $1.99\n3       roasted red pepper hummus 300g     60 tubs   CHECK: is this the new recipe?\n4       classic hummus 300g                80 tubs   $3.45\n5       whole grain mustard 350ml          24 jars   NOTE: last order of mustard had 3 broken jars - please double check packaging\n6       butter croissants 6-pack           24 pks    $2.69\n7       flour tortillas 12-inch 12ct       30 packs  $2.85\n8       mango smoothie 500ml               120 bottles\n9       mixed berry smoothie 500ml         120 bottles\n10      garlic herb hummus 300g            OUT OF STOCK LAST TIME — please confirm availability   120 tubs\n\nShip to: Sunnyside Market, 72 Harvest Lane, Portland OR 97205\nPreferred delivery: Nov 18-20\nFREIGHT: $185.00\nPO ref: SSM-11-2025-003\nTOTAL: $4,016.38`,
   },
   {
     id: "chat", label: "Chat Message", icon: "💬",
     description: "Casual text/WhatsApp style order",
-    content: `Hey! It's Mike from The Corner Kitchen. Need to place an order with FreshFoods for this week:\n\nThe usual sauces - 20 jars of the marinara and 10 of the pesto\nAlso 30 bottles of ranch dressing and 15 of the Italian herb\nCan we get like 24 or maybe 30 packs of the burger patties? Whatever you have in stock\nOh and we're almost out of the chicken tenders - the 1kg bags. Need about 40 bags\n\nActually wait - make the marinara 25 jars not 20\n\nSame delivery address. Can you get it here by Thursday morning before we open? We open at 6am so anytime before that works\n\nPayment on account as usual\n\nThanks!!`,
+    image: "/samples/textorder.png",
+    content: `[Chat conversation — FreshFoods Order]\n\nCustomer: Hi, here's what I need for our deli restock:\n1. Classic Marinara Sauce, 500ml - 60 jars\n2. Roasted Red Pepper Hummus, 300g - 80 tubs\n3. Spinach & Feta Dip, 400g - 50 tubs\n4. Sliced Swiss Cheese (2.5kg bulk) - roughly 10kg\nIs all that in stock?\n\nAgent: Got it.\nAgent: Let me double check what's available.\nAgent: OK so marinara, hummus, & spinach dip are good to go, but we're short on the sliced swiss.\n\nCustomer: Would 12kg work to round out your order with the Swiss?\n\nAgent: 12kg works. We've been going through it faster lately.\n\nCustomer: Can we make it 70 jars of marinara total? Should be good with the hummus and dip.\n\nAgent: No problem, I'll make it 70 jars of marinara. I'll update the totals and email your PO shortly. Let me know if you need anything.`,
   },
 ];
 
@@ -232,6 +255,9 @@ const T = {
   red: "#DC2626",
   redLight: "#FEF2F2",
   redBorder: "#FECACA",
+  orange: "#EA580C",
+  orangeLight: "#FFF7ED",
+  orangeBorder: "#FDBA74",
   purple: "#7C3AED",
   purpleLight: "#F5F3FF",
   radius: 10,
@@ -296,17 +322,17 @@ function InfoTile({ label, value, sub, icon, validationWarning, onMouseEnter, on
     <div
       className="flora-hover-tile"
       onMouseEnter={onMouseEnter} onMouseLeave={onMouseLeave}
-      style={{ background: T.surface, borderRadius: T.radius, border: `1px solid ${validationWarning ? "#FDBA74" : T.border}`, padding: "16px 18px", position: "relative", cursor: onMouseEnter ? "default" : undefined, transition: "box-shadow 0.15s ease" }}
+      style={{ background: T.surface, borderRadius: T.radius, border: `1px solid ${validationWarning ? T.orangeBorder : T.border}`, padding: "16px 18px", position: "relative", cursor: onMouseEnter ? "default" : undefined, transition: "box-shadow 0.15s ease" }}
     >
-      {validationWarning && <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 2, borderRadius: "10px 10px 0 0", background: "linear-gradient(90deg, #F97316, #EA580C)" }} />}
+      {validationWarning && <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 2, borderRadius: "10px 10px 0 0", background: `linear-gradient(90deg, #F97316, ${T.orange})` }} />}
       <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
         {icon && <span style={{ fontSize: 13 }}>{icon}</span>}
         <span style={{ fontFamily: T.fontMono, fontSize: 10, fontWeight: 600, color: T.textTertiary, textTransform: "uppercase", letterSpacing: "0.8px" }}>{label}</span>
-        {validationWarning && <span style={{ fontFamily: T.fontMono, fontSize: 9, fontWeight: 700, padding: "1px 6px", borderRadius: 999, background: "#FFF7ED", color: "#EA580C", border: "1px solid #FDBA74" }}>NEEDS CONFIRM</span>}
+        {validationWarning && <span style={{ fontFamily: T.fontMono, fontSize: 9, fontWeight: 700, padding: "1px 6px", borderRadius: 999, background: T.orangeLight, color: T.orange, border: `1px solid ${T.orangeBorder}` }}>NEEDS CONFIRM</span>}
       </div>
       <div style={{ fontSize: 14, fontWeight: 600, color: T.text, lineHeight: 1.4 }}>{value || "—"}</div>
       {sub && <div style={{ fontSize: 12, color: T.textTertiary, marginTop: 3 }}>{sub}</div>}
-      {validationWarning && <div style={{ fontSize: 11, color: "#EA580C", marginTop: 5, lineHeight: 1.4 }}>{validationWarning}</div>}
+      {validationWarning && <div style={{ fontSize: 11, color: T.orange, marginTop: 5, lineHeight: 1.4 }}>{validationWarning}</div>}
     </div>
   );
 }
@@ -316,13 +342,13 @@ function StepCard({ number, title, description, status, badge, children }) {
     complete: { bg: T.greenLight, color: T.green, border: T.greenBorder, icon: "✓" },
     active: { bg: T.accentLight, color: T.accent, border: "#BFDBFE", icon: "→" },
     locked: { bg: "#F5F5F4", color: T.textTertiary, border: T.border, icon: "🔒" },
-    premium: { bg: "#FFF7ED", color: "#EA580C", border: "#FDBA74", icon: "★" },
+    premium: { bg: T.orangeLight, color: T.orange, border: T.orangeBorder, icon: "★" },
   };
   const s = statusColors[status];
   const isPremium = status === "premium";
   return (
-    <div style={{ background: T.surface, borderRadius: T.radiusLg, border: `1px solid ${isPremium ? "#FDBA74" : status === "active" ? T.accent : T.border}`, overflow: "hidden", boxShadow: isPremium ? "0 0 0 1px #FDBA7430, 0 4px 16px #EA580C08" : status === "active" ? `0 0 0 1px ${T.accent}20` : "none" }}>
-      {isPremium && <div style={{ height: 2, background: "linear-gradient(90deg, #F97316, #EA580C, #F97316)" }} />}
+    <div style={{ background: T.surface, borderRadius: T.radiusLg, border: `1px solid ${isPremium ? T.orangeBorder : status === "active" ? T.accent : T.border}`, overflow: "hidden", boxShadow: isPremium ? `0 0 0 1px ${T.orangeBorder}30, 0 4px 16px ${T.orange}08` : status === "active" ? `0 0 12px ${T.accent}25, 0 0 0 1px ${T.accent}40` : "none" }}>
+      {isPremium && <div style={{ height: 2, background: `linear-gradient(90deg, #F97316, ${T.orange}, #F97316)` }} />}
       <div style={{ padding: "18px 22px", display: "flex", alignItems: "center", gap: 14, borderBottom: children ? `1px solid ${T.borderLight}` : "none" }}>
         <div style={{ width: 32, height: 32, borderRadius: 8, background: s.bg, border: `1px solid ${s.border}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 700, color: s.color, flexShrink: 0 }}>
           {s.icon}
@@ -332,7 +358,7 @@ function StepCard({ number, title, description, status, badge, children }) {
             <span style={{ fontFamily: T.fontMono, fontSize: 10, fontWeight: 700, color: T.textTertiary, letterSpacing: "0.5px" }}>STEP {number}</span>
             <span style={{ fontSize: 14, fontWeight: 600, color: T.text }}>{title}</span>
             {badge && (
-              <span style={{ fontFamily: T.fontMono, fontSize: 9, fontWeight: 700, padding: "2px 8px", borderRadius: 999, background: "linear-gradient(135deg, #F97316, #EA580C)", color: "#fff", letterSpacing: "0.8px", textTransform: "uppercase" }}>{badge}</span>
+              <span style={{ fontFamily: T.fontMono, fontSize: 9, fontWeight: 700, padding: "2px 8px", borderRadius: 999, background: `linear-gradient(135deg, #F97316, ${T.orange})`, color: "#fff", letterSpacing: "0.8px", textTransform: "uppercase" }}>{badge}</span>
             )}
           </div>
           <div style={{ fontSize: 13, color: T.textSecondary, marginTop: 2 }}>{description}</div>
@@ -369,7 +395,7 @@ function ValidationPanel({ items, onHighlight }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
       {/* Explanation banner */}
-      <div style={{ padding: "12px 16px", borderRadius: T.radiusSm, background: "#FFF7ED", border: "1px solid #FDBA74", display: "flex", gap: 10, alignItems: "flex-start" }}>
+      <div style={{ padding: "12px 16px", borderRadius: T.radiusSm, background: T.orangeLight, border: `1px solid ${T.orangeBorder}`, display: "flex", gap: 10, alignItems: "flex-start" }}>
         <span style={{ fontSize: 16, flexShrink: 0, marginTop: 1 }}>🎯</span>
         <div>
           <div style={{ fontSize: 13, fontWeight: 600, color: "#9A3412", marginBottom: 3 }}>Literal extraction — nothing assumed</div>
@@ -399,11 +425,11 @@ function ValidationPanel({ items, onHighlight }) {
               <td style={{ padding: "10px 12px" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                   <span style={{ fontSize: 13 }}>{issueIcons[item.issue] || "⚠️"}</span>
-                  <span style={{ fontFamily: T.fontMono, fontSize: 11, fontWeight: 600, color: "#EA580C" }}>{issueLabels[item.issue] || item.issue}</span>
+                  <span style={{ fontFamily: T.fontMono, fontSize: 11, fontWeight: 600, color: T.orange }}>{issueLabels[item.issue] || item.issue}</span>
                 </div>
               </td>
               <td style={{ padding: "10px 12px" }}>
-                <code style={{ fontFamily: T.fontMono, fontSize: 12, fontWeight: 600, color: T.text, background: "#FFF7ED", padding: "2px 8px", borderRadius: 4, border: "1px solid #FDBA74" }}>{item.extracted_value}</code>
+                <code style={{ fontFamily: T.fontMono, fontSize: 12, fontWeight: 600, color: T.text, background: T.orangeLight, padding: "2px 8px", borderRadius: 4, border: `1px solid ${T.orangeBorder}` }}>{item.extracted_value}</code>
               </td>
               <td style={{ padding: "10px 12px", fontSize: 12, color: T.textSecondary, lineHeight: 1.5, maxWidth: 220 }}>{item.message}</td>
               <td style={{ padding: "10px 12px" }}>
@@ -415,6 +441,190 @@ function ValidationPanel({ items, onHighlight }) {
           ))}
         </tbody>
       </table>
+    </div>
+  );
+}
+
+// ─── Draft NetSuite Sales Order Form ─────────────────────────────────────────
+const CATALOG_BY_CATEGORY = (() => {
+  const grouped = {};
+  DEMO_CATALOG.forEach(item => {
+    if (!grouped[item.category]) grouped[item.category] = [];
+    grouped[item.category].push(item);
+  });
+  return grouped;
+})();
+
+const draftInputStyle = {
+  width: "100%", padding: "7px 10px", borderRadius: 6, border: `1px solid ${T.border}`,
+  fontSize: 13, fontFamily: T.font, color: T.text, background: "#fff",
+  outline: "none", transition: "border-color 0.15s ease", boxSizing: "border-box",
+};
+const draftSelectStyle = { ...draftInputStyle, appearance: "auto" };
+const draftLabelStyle = {
+  fontFamily: T.fontMono, fontSize: 9, fontWeight: 700, color: T.textTertiary,
+  textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 5, display: "block",
+};
+
+function DraftSalesOrder({ draftOrder, setDraftOrder, catalog }) {
+  const updateHeader = (field, value) => setDraftOrder(prev => ({ ...prev, header: { ...prev.header, [field]: value } }));
+  const updateShipping = (field, value) => setDraftOrder(prev => ({ ...prev, shipping: { ...prev.shipping, [field]: value } }));
+  const updateLineItem = (id, field, value) => setDraftOrder(prev => ({
+    ...prev,
+    lineItems: prev.lineItems.map(li => li.id !== id ? li : { ...li, [field]: value }),
+  }));
+  const handleSkuChange = (id, newSku) => {
+    const catItem = catalog.find(c => c.sku === newSku);
+    setDraftOrder(prev => ({
+      ...prev,
+      lineItems: prev.lineItems.map(li => li.id !== id ? li : {
+        ...li, catalogSku: newSku, description: catItem?.name || "", rate: catItem?.price || 0, uom: catItem?.uom || "",
+      }),
+    }));
+  };
+
+  const subtotal = draftOrder.lineItems.reduce((sum, li) => sum + (li.quantity || 0) * (li.rate || 0), 0);
+  const tax = subtotal * draftOrder.taxRate;
+  const total = subtotal + tax + (draftOrder.shippingCost || 0);
+  const fmt = (n) => n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+
+      {/* ERP Form Header Bar */}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px", background: "#F8FAFC", borderRadius: 8, border: `1px solid ${T.border}` }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <span style={{ fontFamily: T.fontMono, fontSize: 12, fontWeight: 700, color: T.text }}>Sales Order</span>
+          <span style={{ fontFamily: T.fontMono, fontSize: 9, fontWeight: 700, padding: "2px 8px", borderRadius: 999, background: T.accentLight, color: T.accent, border: "1px solid #BFDBFE", letterSpacing: "0.5px" }}>DRAFT</span>
+        </div>
+        <span style={{ fontFamily: T.fontMono, fontSize: 11, color: T.textTertiary }}>SO-{new Date().getFullYear()}-DRAFT</span>
+      </div>
+
+      {/* ── Primary Information ── */}
+      <div>
+        <div style={{ ...draftLabelStyle, marginBottom: 10, fontSize: 10 }}>Primary Information</div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12 }}>
+          <div>
+            <label style={draftLabelStyle}>Customer</label>
+            <input style={draftInputStyle} value={draftOrder.header.customer} onChange={e => updateHeader("customer", e.target.value)} />
+          </div>
+          <div>
+            <label style={draftLabelStyle}>Date</label>
+            <input type="date" style={draftInputStyle} value={draftOrder.header.date} onChange={e => updateHeader("date", e.target.value)} />
+          </div>
+          <div>
+            <label style={draftLabelStyle}>PO Number</label>
+            <input style={draftInputStyle} value={draftOrder.header.poNumber} onChange={e => updateHeader("poNumber", e.target.value)} placeholder="Customer PO #" />
+          </div>
+          <div>
+            <label style={draftLabelStyle}>Status</label>
+            <div style={{ padding: "7px 10px", borderRadius: 6, border: `1px solid ${T.greenBorder}`, background: T.greenLight, fontSize: 12, fontWeight: 600, color: T.green }}>Pending Approval</div>
+          </div>
+          <div>
+            <label style={draftLabelStyle}>Terms</label>
+            <select style={draftSelectStyle} value={draftOrder.header.terms} onChange={e => updateHeader("terms", e.target.value)}>
+              {["Net 30", "Net 60", "Due on Receipt", "2% 10 Net 30"].map(t => <option key={t} value={t}>{t}</option>)}
+            </select>
+          </div>
+          <div>
+            <label style={draftLabelStyle}>Sales Rep</label>
+            <input style={draftInputStyle} value={draftOrder.header.salesRep} onChange={e => updateHeader("salesRep", e.target.value)} placeholder="Assign rep..." />
+          </div>
+        </div>
+        <div style={{ marginTop: 12 }}>
+          <label style={draftLabelStyle}>Memo</label>
+          <input style={draftInputStyle} value={draftOrder.header.memo} onChange={e => updateHeader("memo", e.target.value)} placeholder="Internal order notes..." />
+        </div>
+      </div>
+
+      {/* ── Shipping ── */}
+      <div style={{ borderTop: `1px solid ${T.borderLight}`, paddingTop: 16 }}>
+        <div style={{ ...draftLabelStyle, marginBottom: 10, fontSize: 10 }}>Shipping</div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+          <div style={{ gridRow: "span 2" }}>
+            <label style={draftLabelStyle}>Ship To</label>
+            <textarea style={{ ...draftInputStyle, resize: "vertical", minHeight: 68 }} value={draftOrder.shipping.shipTo} onChange={e => updateShipping("shipTo", e.target.value)} rows={3} />
+          </div>
+          <div>
+            <label style={draftLabelStyle}>Requested Delivery</label>
+            <input type="date" style={draftInputStyle} value={draftOrder.shipping.requestedDate} onChange={e => updateShipping("requestedDate", e.target.value)} />
+          </div>
+          <div>
+            <label style={draftLabelStyle}>Shipping Method</label>
+            <select style={draftSelectStyle} value={draftOrder.shipping.shippingMethod} onChange={e => updateShipping("shippingMethod", e.target.value)}>
+              {["Standard Ground", "Express", "Freight LTL", "Will Call"].map(m => <option key={m} value={m}>{m}</option>)}
+            </select>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Line Items ── */}
+      <div style={{ borderTop: `1px solid ${T.borderLight}`, paddingTop: 16 }}>
+        <div style={{ ...draftLabelStyle, marginBottom: 10, fontSize: 10 }}>Items</div>
+        <div style={{ border: `1px solid ${T.border}`, borderRadius: 8, overflow: "hidden" }}>
+          <div style={{ overflowX: "auto" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
+              <thead>
+                <tr style={{ background: "#F8FAFC", borderBottom: `2px solid ${T.border}` }}>
+                  {["#", "Item / SKU", "Description", "Qty", "UoM", "Rate", "Amount"].map(h => (
+                    <th key={h} style={{ padding: "8px 10px", textAlign: "left", fontFamily: T.fontMono, fontSize: 9, fontWeight: 700, color: T.textTertiary, textTransform: "uppercase", letterSpacing: "0.5px", whiteSpace: "nowrap" }}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {draftOrder.lineItems.map((li, i) => (
+                  <tr key={li.id} style={{ borderBottom: `1px solid ${T.borderLight}`, background: i % 2 === 1 ? "#FAFAF9" : "transparent" }}>
+                    <td style={{ padding: "8px 10px", color: T.textTertiary, fontFamily: T.fontMono, fontSize: 11, width: 32 }}>{li.id}</td>
+                    <td style={{ padding: "8px 6px", minWidth: 200 }}>
+                      <select style={{ ...draftSelectStyle, fontSize: 11, padding: "5px 6px" }} value={li.catalogSku} onChange={e => handleSkuChange(li.id, e.target.value)}>
+                        <option value="">-- Select Item --</option>
+                        {Object.entries(CATALOG_BY_CATEGORY).map(([cat, items]) => (
+                          <optgroup key={cat} label={cat}>
+                            {items.map(c => <option key={c.sku} value={c.sku}>{c.sku} — {c.name}</option>)}
+                          </optgroup>
+                        ))}
+                      </select>
+                    </td>
+                    <td style={{ padding: "8px 6px", minWidth: 160 }}>
+                      <input style={{ ...draftInputStyle, fontSize: 12, padding: "5px 8px" }} value={li.description} onChange={e => updateLineItem(li.id, "description", e.target.value)} />
+                    </td>
+                    <td style={{ padding: "8px 6px", width: 80 }}>
+                      <input type="number" min="0" style={{ ...draftInputStyle, fontSize: 12, padding: "5px 8px", fontFamily: T.fontMono, textAlign: "right", minWidth: 60 }} value={li.quantity} onChange={e => updateLineItem(li.id, "quantity", parseFloat(e.target.value) || 0)} />
+                    </td>
+                    <td style={{ padding: "8px 10px", fontFamily: T.fontMono, fontSize: 11, color: T.textSecondary, whiteSpace: "nowrap" }}>{li.uom || "—"}</td>
+                    <td style={{ padding: "8px 6px", width: 95 }}>
+                      <input type="number" min="0" step="0.01" style={{ ...draftInputStyle, fontSize: 12, padding: "5px 8px", fontFamily: T.fontMono, textAlign: "right", minWidth: 70 }} value={li.rate} onChange={e => updateLineItem(li.id, "rate", parseFloat(e.target.value) || 0)} />
+                    </td>
+                    <td style={{ padding: "8px 10px", fontFamily: T.fontMono, fontSize: 12, fontWeight: 600, color: T.text, textAlign: "right", width: 90 }}>
+                      ${fmt((li.quantity || 0) * (li.rate || 0))}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Totals */}
+          <div style={{ borderTop: `2px solid ${T.border}`, padding: "14px 16px", display: "flex", justifyContent: "flex-end", gap: 24, background: "#F8FAFC" }}>
+            <div style={{ textAlign: "right" }}>
+              <div style={{ fontFamily: T.fontMono, fontSize: 9, color: T.textTertiary, textTransform: "uppercase", letterSpacing: "0.5px" }}>Subtotal</div>
+              <div style={{ fontFamily: T.fontMono, fontSize: 14, fontWeight: 600, color: T.text }}>${fmt(subtotal)}</div>
+            </div>
+            <div style={{ textAlign: "right" }}>
+              <div style={{ fontFamily: T.fontMono, fontSize: 9, color: T.textTertiary, textTransform: "uppercase", letterSpacing: "0.5px" }}>Tax (6.25%)</div>
+              <div style={{ fontFamily: T.fontMono, fontSize: 14, fontWeight: 600, color: T.text }}>${fmt(tax)}</div>
+            </div>
+            <div style={{ textAlign: "right" }}>
+              <div style={{ fontFamily: T.fontMono, fontSize: 9, color: T.textTertiary, textTransform: "uppercase", letterSpacing: "0.5px" }}>Shipping</div>
+              <input type="number" min="0" step="0.01" style={{ ...draftInputStyle, width: 90, fontSize: 13, padding: "4px 8px", fontFamily: T.fontMono, textAlign: "right", fontWeight: 600 }} value={draftOrder.shippingCost} onChange={e => setDraftOrder(prev => ({ ...prev, shippingCost: parseFloat(e.target.value) || 0 }))} />
+            </div>
+            <div style={{ textAlign: "right" }}>
+              <div style={{ fontFamily: T.fontMono, fontSize: 9, color: T.accent, textTransform: "uppercase", letterSpacing: "0.5px", fontWeight: 700 }}>Total</div>
+              <div style={{ fontFamily: T.fontMono, fontSize: 18, fontWeight: 800, color: T.accent }}>${fmt(total)}</div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
@@ -531,11 +741,11 @@ function ResultsView({ data, onHighlight }) {
   const hl = (terms) => onHighlight?.(terms);
   const clearHl = () => onHighlight?.([]);
 
-  // Run SKU matching against demo catalog
-  const matchedItems = (line_items || []).map(item => ({
+  // Run SKU matching against demo catalog (memoized to avoid recomputation on draft edits)
+  const matchedItems = useMemo(() => (line_items || []).map(item => ({
     ...item,
     match: matchSkuToCatalog(item),
-  }));
+  })), [line_items]);
 
   const matchStats = {
     exact: matchedItems.filter(i => i.match?.matchType === "exact").length,
@@ -546,6 +756,51 @@ function ResultsView({ data, onHighlight }) {
 
   const valItems = validation_items || [];
 
+  // ── Draft Sales Order state (editable form for Step 4) ──
+  const [draftOrder, setDraftOrder] = useState(null);
+  const draftInitialized = useRef(false);
+
+  useEffect(() => {
+    if (!draftInitialized.current && matchedItems.length > 0) {
+      draftInitialized.current = true;
+      const today = new Date().toISOString().split("T")[0];
+      // Best-effort parse of requested date to ISO format
+      let reqDate = "";
+      if (delivery?.requested_date) {
+        const parsed = new Date(delivery.requested_date);
+        if (!isNaN(parsed.getTime())) reqDate = parsed.toISOString().split("T")[0];
+      }
+      setDraftOrder({
+        header: {
+          customer: customer?.name || "",
+          date: today,
+          poNumber: po_reference || "",
+          terms: "Net 30",
+          salesRep: "",
+          memo: "",
+        },
+        shipping: {
+          shipTo: delivery?.address || "",
+          requestedDate: reqDate,
+          shippingMethod: "Standard Ground",
+        },
+        lineItems: matchedItems.map((item, i) => {
+          const cat = item.match?.catalogItem;
+          return {
+            id: i + 1,
+            catalogSku: cat?.sku || "",
+            description: cat?.name || item.description,
+            quantity: item.quantity || 0,
+            uom: cat?.uom || item.uom || "",
+            rate: cat?.price || item.unit_price || 0,
+          };
+        }),
+        shippingCost: totals?.freight || 0,
+        taxRate: 0.0625,
+      });
+    }
+  }, [matchedItems]);
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
 
@@ -553,7 +808,101 @@ function ResultsView({ data, onHighlight }) {
       <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
         <div style={{ fontFamily: T.fontMono, fontSize: 10, fontWeight: 700, color: T.textTertiary, textTransform: "uppercase", letterSpacing: "1px", marginBottom: 4 }}>Automation Pipeline</div>
 
-        <StepCard number="1" title="Extract Order Data" description="AI parsed raw input into structured line items, customer info, and delivery details." status="complete" />
+        <StepCard number="1" title="Extract Order Data" description="AI parsed raw input into structured line items, customer info, and delivery details." status="complete">
+          {/* Info tiles */}
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 10, marginBottom: 16 }}>
+            <InfoTile icon="🏢" label="Customer" value={customer?.name} sub={customer?.contact_person}
+              onMouseEnter={() => hl([customer?.name, customer?.contact_person, customer?.email, customer?.phone].filter(Boolean))}
+              onMouseLeave={clearHl}
+            />
+            <InfoTile icon="📋" label="PO Reference" value={po_reference}
+              validationWarning={valItems.find(v => v.field?.includes("po_reference"))?.message}
+              onMouseEnter={() => hl([po_reference].filter(Boolean))}
+              onMouseLeave={clearHl}
+            />
+            <InfoTile icon="📅" label="Delivery Date" value={delivery?.requested_date}
+              validationWarning={valItems.find(v => v.field?.includes("requested_date"))?.message}
+              onMouseEnter={() => hl([delivery?.requested_date].filter(Boolean))}
+              onMouseLeave={clearHl}
+            />
+            <InfoTile icon="📍" label="Ship To" value={delivery?.address}
+              validationWarning={valItems.find(v => v.field?.includes("address"))?.message}
+              onMouseEnter={() => {
+                const addr = delivery?.address;
+                if (!addr) return clearHl();
+                const parts = addr.split(/,\s*/).filter(p => p.length > 3);
+                hl(parts.length > 0 ? parts : [addr]);
+              }}
+              onMouseLeave={clearHl}
+            />
+          </div>
+
+          {/* Line Items Table */}
+          <div style={{ background: T.surface, borderRadius: T.radiusLg, border: `1px solid ${T.border}`, overflow: "hidden" }}>
+            <div style={{ padding: "14px 20px", borderBottom: `1px solid ${T.borderLight}`, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <span style={{ fontFamily: T.fontMono, fontSize: 10, fontWeight: 700, color: T.textTertiary, textTransform: "uppercase", letterSpacing: "1px" }}>Extracted Line Items</span>
+              <span style={{ fontFamily: T.fontMono, fontSize: 11, color: T.textTertiary }}>{line_items?.length || 0} items</span>
+            </div>
+            <div style={{ overflowX: "auto" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+                <thead>
+                  <tr style={{ borderBottom: `2px solid ${T.border}` }}>
+                    {["#", "Description", "SKU", "Qty", "UoM", "Unit $", "Ext $", "Confidence"].map(h => (
+                      <th key={h} style={{ padding: "10px 14px", textAlign: "left", fontFamily: T.fontMono, fontSize: 10, fontWeight: 700, color: T.textTertiary, textTransform: "uppercase", letterSpacing: "0.5px", whiteSpace: "nowrap" }}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {line_items?.map((item, i) => (
+                    <tr key={i}
+                      className="flora-hover-row"
+                      onMouseEnter={() => hl([item.description, item.sku, item.notes].filter(Boolean))}
+                      onMouseLeave={clearHl}
+                      style={{ borderBottom: `1px solid ${T.borderLight}`, background: i % 2 === 1 ? "#FAFAF9" : "transparent", cursor: "default", transition: "background 0.1s ease" }}
+                    >
+                      <td style={{ padding: "12px 14px", color: T.textTertiary, fontFamily: T.fontMono, fontSize: 11 }}>{item.line}</td>
+                      <td style={{ padding: "12px 14px", fontWeight: 500, color: T.text, maxWidth: 260 }}>
+                        {item.description}
+                        {item.notes && <div style={{ fontSize: 12, color: T.textTertiary, marginTop: 3, fontStyle: "italic" }}>{item.notes}</div>}
+                      </td>
+                      <td style={{ padding: "12px 14px", fontFamily: T.fontMono, fontSize: 11, color: T.accent, fontWeight: 500 }}>{item.sku || "—"}</td>
+                      <td style={{ padding: "12px 14px", fontFamily: T.fontMono, fontWeight: 700, color: T.text }}>{item.quantity}</td>
+                      <td style={{ padding: "12px 14px", color: T.textSecondary, fontSize: 12 }}>{item.uom}</td>
+                      <td style={{ padding: "12px 14px", fontFamily: T.fontMono, fontSize: 12, color: T.textSecondary }}>{item.unit_price != null ? `$${item.unit_price.toFixed(2)}` : "—"}</td>
+                      <td style={{ padding: "12px 14px", fontFamily: T.fontMono, fontSize: 12, color: T.text, fontWeight: 500 }}>{item.ext_price != null ? `$${item.ext_price.toFixed(2)}` : "—"}</td>
+                      <td style={{ padding: "12px 14px" }}><ConfidencePill level={item.confidence} /></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            {totals?.total != null && (
+              <div style={{ borderTop: `1px solid ${T.border}`, padding: "14px 20px", display: "flex", justifyContent: "flex-end", gap: 28 }}>
+                {totals.subtotal != null && <div style={{ textAlign: "right" }}><div style={{ fontFamily: T.fontMono, fontSize: 10, color: T.textTertiary, textTransform: "uppercase" }}>Subtotal</div><div style={{ fontFamily: T.fontMono, fontSize: 14, fontWeight: 600 }}>${totals.subtotal.toLocaleString("en-US", { minimumFractionDigits: 2 })}</div></div>}
+                {totals.tax != null && <div style={{ textAlign: "right" }}><div style={{ fontFamily: T.fontMono, fontSize: 10, color: T.textTertiary, textTransform: "uppercase" }}>Tax</div><div style={{ fontFamily: T.fontMono, fontSize: 14, fontWeight: 600 }}>${totals.tax.toLocaleString("en-US", { minimumFractionDigits: 2 })}</div></div>}
+                {totals.freight != null && <div style={{ textAlign: "right" }}><div style={{ fontFamily: T.fontMono, fontSize: 10, color: T.textTertiary, textTransform: "uppercase" }}>Freight</div><div style={{ fontFamily: T.fontMono, fontSize: 14, fontWeight: 600 }}>${totals.freight.toLocaleString("en-US", { minimumFractionDigits: 2 })}</div></div>}
+                {totals.total != null && <div style={{ textAlign: "right" }}><div style={{ fontFamily: T.fontMono, fontSize: 10, color: T.accent, textTransform: "uppercase", fontWeight: 700 }}>Total</div><div style={{ fontFamily: T.fontMono, fontSize: 18, fontWeight: 800, color: T.accent }}>${totals.total.toLocaleString("en-US", { minimumFractionDigits: 2 })}</div></div>}
+              </div>
+            )}
+          </div>
+
+          {/* Flags */}
+          {flags && flags.length > 0 && (
+            <div style={{ marginTop: 16 }}>
+              <div style={{ fontFamily: T.fontMono, fontSize: 10, fontWeight: 700, color: T.textTertiary, textTransform: "uppercase", letterSpacing: "1px", marginBottom: 10 }}>Flags & Ambiguities</div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                {flags.map((flag, i) => {
+                  const words = flag.message.match(/"[^"]+"|'[^']+'|\b[A-Z][\w-]+\b|\b\d+\s*\w+/g) || [];
+                  const terms = words.map(w => w.replace(/^["']|["']$/g, "")).filter(w => w.length > 2);
+                  return <FlagRow key={i} flag={flag}
+                    onMouseEnter={() => hl(terms)}
+                    onMouseLeave={clearHl}
+                  />;
+                })}
+              </div>
+            </div>
+          )}
+        </StepCard>
 
         <StepCard number="2" title="Match to Product Catalog" description={`Matched ${matchStats.exact + matchStats.fuzzy} of ${matchedItems.length} items to your catalog. ${matchStats.unmatched > 0 ? `${matchStats.unmatched} need manual review.` : "All items resolved."}`} status="active">
           {/* SKU Matching Results Table */}
@@ -619,107 +968,11 @@ function ResultsView({ data, onHighlight }) {
           <ValidationPanel items={valItems} onHighlight={onHighlight} />
         </StepCard>
 
-        <StepCard number="4" title="Draft Sales Order in ERP" description="Auto-create a sales order in NetSuite, SAP, Dynamics, or QuickBooks with matched SKUs, quantities, and pricing." status="locked" />
+        <StepCard number="4" title="Draft Sales Order in ERP" description={draftOrder ? "Editable draft pre-populated from extracted data and catalog matches. Review and adjust before submission." : "Auto-create a sales order in NetSuite, SAP, Dynamics, or QuickBooks with matched SKUs, quantities, and pricing."} status={draftOrder ? "active" : "locked"}>
+          {draftOrder && <DraftSalesOrder draftOrder={draftOrder} setDraftOrder={setDraftOrder} catalog={DEMO_CATALOG} />}
+        </StepCard>
         <StepCard number="5" title="Confirm & Submit" description="One-click approval or straight-through processing for high-confidence orders from trusted customers." status="locked" />
       </div>
-
-      {/* ── Extracted Data Details ── */}
-      <div style={{ fontFamily: T.fontMono, fontSize: 10, fontWeight: 700, color: T.textTertiary, textTransform: "uppercase", letterSpacing: "1px", marginTop: 8 }}>Extraction Details</div>
-
-      {/* Info tiles */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 10 }}>
-        <InfoTile icon="🏢" label="Customer" value={customer?.name} sub={customer?.contact_person}
-          onMouseEnter={() => hl([customer?.name, customer?.contact_person, customer?.email, customer?.phone].filter(Boolean))}
-          onMouseLeave={clearHl}
-        />
-        <InfoTile icon="📋" label="PO Reference" value={po_reference}
-          validationWarning={valItems.find(v => v.field?.includes("po_reference"))?.message}
-          onMouseEnter={() => hl([po_reference].filter(Boolean))}
-          onMouseLeave={clearHl}
-        />
-        <InfoTile icon="📅" label="Delivery Date" value={delivery?.requested_date}
-          validationWarning={valItems.find(v => v.field?.includes("requested_date"))?.message}
-          onMouseEnter={() => hl([delivery?.requested_date].filter(Boolean))}
-          onMouseLeave={clearHl}
-        />
-        <InfoTile icon="📍" label="Ship To" value={delivery?.address}
-          validationWarning={valItems.find(v => v.field?.includes("address"))?.message}
-          onMouseEnter={() => {
-            const addr = delivery?.address;
-            if (!addr) return clearHl();
-            // Split address into meaningful chunks for better matching
-            const parts = addr.split(/,\s*/).filter(p => p.length > 3);
-            hl(parts.length > 0 ? parts : [addr]);
-          }}
-          onMouseLeave={clearHl}
-        />
-      </div>
-
-      {/* Line Items Table */}
-      <div style={{ background: T.surface, borderRadius: T.radiusLg, border: `1px solid ${T.border}`, overflow: "hidden" }}>
-        <div style={{ padding: "14px 20px", borderBottom: `1px solid ${T.borderLight}`, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <span style={{ fontFamily: T.fontMono, fontSize: 10, fontWeight: 700, color: T.textTertiary, textTransform: "uppercase", letterSpacing: "1px" }}>Extracted Line Items</span>
-          <span style={{ fontFamily: T.fontMono, fontSize: 11, color: T.textTertiary }}>{line_items?.length || 0} items</span>
-        </div>
-        <div style={{ overflowX: "auto" }}>
-          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
-            <thead>
-              <tr style={{ borderBottom: `2px solid ${T.border}` }}>
-                {["#", "Description", "SKU", "Qty", "UoM", "Unit $", "Ext $", "Confidence"].map(h => (
-                  <th key={h} style={{ padding: "10px 14px", textAlign: "left", fontFamily: T.fontMono, fontSize: 10, fontWeight: 700, color: T.textTertiary, textTransform: "uppercase", letterSpacing: "0.5px", whiteSpace: "nowrap" }}>{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {line_items?.map((item, i) => (
-                <tr key={i}
-                  className="flora-hover-row"
-                  onMouseEnter={() => hl([item.description, item.sku, item.notes].filter(Boolean))}
-                  onMouseLeave={clearHl}
-                  style={{ borderBottom: `1px solid ${T.borderLight}`, background: i % 2 === 1 ? "#FAFAF9" : "transparent", cursor: "default", transition: "background 0.1s ease" }}
-                >
-                  <td style={{ padding: "12px 14px", color: T.textTertiary, fontFamily: T.fontMono, fontSize: 11 }}>{item.line}</td>
-                  <td style={{ padding: "12px 14px", fontWeight: 500, color: T.text, maxWidth: 260 }}>
-                    {item.description}
-                    {item.notes && <div style={{ fontSize: 12, color: T.textTertiary, marginTop: 3, fontStyle: "italic" }}>{item.notes}</div>}
-                  </td>
-                  <td style={{ padding: "12px 14px", fontFamily: T.fontMono, fontSize: 11, color: T.accent, fontWeight: 500 }}>{item.sku || "—"}</td>
-                  <td style={{ padding: "12px 14px", fontFamily: T.fontMono, fontWeight: 700, color: T.text }}>{item.quantity}</td>
-                  <td style={{ padding: "12px 14px", color: T.textSecondary, fontSize: 12 }}>{item.uom}</td>
-                  <td style={{ padding: "12px 14px", fontFamily: T.fontMono, fontSize: 12, color: T.textSecondary }}>{item.unit_price != null ? `$${item.unit_price.toFixed(2)}` : "—"}</td>
-                  <td style={{ padding: "12px 14px", fontFamily: T.fontMono, fontSize: 12, color: T.text, fontWeight: 500 }}>{item.ext_price != null ? `$${item.ext_price.toFixed(2)}` : "—"}</td>
-                  <td style={{ padding: "12px 14px" }}><ConfidencePill level={item.confidence} /></td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        {totals?.total != null && (
-          <div style={{ borderTop: `1px solid ${T.border}`, padding: "14px 20px", display: "flex", justifyContent: "flex-end", gap: 28 }}>
-            {totals.subtotal != null && <div style={{ textAlign: "right" }}><div style={{ fontFamily: T.fontMono, fontSize: 10, color: T.textTertiary, textTransform: "uppercase" }}>Subtotal</div><div style={{ fontFamily: T.fontMono, fontSize: 14, fontWeight: 600 }}>${totals.subtotal.toLocaleString("en-US", { minimumFractionDigits: 2 })}</div></div>}
-            {totals.tax != null && <div style={{ textAlign: "right" }}><div style={{ fontFamily: T.fontMono, fontSize: 10, color: T.textTertiary, textTransform: "uppercase" }}>Tax</div><div style={{ fontFamily: T.fontMono, fontSize: 14, fontWeight: 600 }}>${totals.tax.toLocaleString("en-US", { minimumFractionDigits: 2 })}</div></div>}
-            {totals.total != null && <div style={{ textAlign: "right" }}><div style={{ fontFamily: T.fontMono, fontSize: 10, color: T.accent, textTransform: "uppercase", fontWeight: 700 }}>Total</div><div style={{ fontFamily: T.fontMono, fontSize: 18, fontWeight: 800, color: T.accent }}>${totals.total.toLocaleString("en-US", { minimumFractionDigits: 2 })}</div></div>}
-          </div>
-        )}
-      </div>
-
-      {/* Flags */}
-      {flags && flags.length > 0 && (
-        <div>
-          <div style={{ fontFamily: T.fontMono, fontSize: 10, fontWeight: 700, color: T.textTertiary, textTransform: "uppercase", letterSpacing: "1px", marginBottom: 10 }}>Flags & Ambiguities</div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            {flags.map((flag, i) => {
-              // Extract key phrases from flag message for highlighting
-              const words = flag.message.match(/"[^"]+"|'[^']+'|\b[A-Z][\w-]+\b|\b\d+\s*\w+/g) || [];
-              const terms = words.map(w => w.replace(/^["']|["']$/g, "")).filter(w => w.length > 2);
-              return <FlagRow key={i} flag={flag}
-                onMouseEnter={() => hl(terms)}
-                onMouseLeave={clearHl}
-              />;
-            })}
-          </div>
-        </div>
-      )}
 
       {/* CTA */}
       <div style={{ background: T.surface, borderRadius: T.radiusLg, border: `1px solid ${T.accent}`, padding: 28, position: "relative", overflow: "hidden", boxShadow: `0 0 0 1px ${T.accent}10` }}>
@@ -757,19 +1010,21 @@ export default function FloraDemo() {
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
   const [processingSource, setProcessingSource] = useState("");
+  const [processingImage, setProcessingImage] = useState(null);
   const [rawInputText, setRawInputText] = useState("");
   const fileInputRef = useRef(null);
   const rawInputScrollRef = useRef(null);
   const [highlightTerms, setHighlightTerms] = useState([]);
 
-  const extractOrder = useCallback(async (text, source) => {
+  const extractOrder = useCallback(async (text, source, image) => {
     setIsProcessing(true);
     setResult(null);
     setError(null);
     setProcessingSource(source);
+    setProcessingImage(image || null);
     setRawInputText(text);
     try {
-      const response = await fetch("https://api.anthropic.com/v1/messages", {
+      const response = await fetch("/api/anthropic", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -811,6 +1066,7 @@ export default function FloraDemo() {
     setResult(null);
     setError(null);
     setProcessingSource("");
+    setProcessingImage(null);
     setRawInputText("");
     setHighlightTerms([]);
     setSelectedSample(null);
@@ -833,6 +1089,7 @@ export default function FloraDemo() {
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Instrument+Sans:ital,wght@0,400..700;1,400..700&family=JetBrains+Mono:wght@400;500;600;700;800&display=swap');
         @keyframes ofspin { to { transform: rotate(360deg); } }
+        @keyframes ofpulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.5; transform: scale(0.75); } }
         @keyframes offade { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
         * { box-sizing: border-box; margin: 0; padding: 0; }
         ::selection { background: ${T.accent}; color: #fff; }
@@ -963,6 +1220,11 @@ export default function FloraDemo() {
                   </div>
                   {/* Raw content */}
                   <div ref={rawInputScrollRef} style={{ overflow: "auto", flex: 1 }}>
+                    {processingImage && (
+                      <div style={{ padding: 8, background: "#F8F8F6", borderBottom: `1px solid ${T.borderLight}` }}>
+                        <img src={processingImage} alt={processingSource} style={{ width: "100%", display: "block", borderRadius: 4 }} />
+                      </div>
+                    )}
                     <HighlightedRawInput text={rawInputText} terms={highlightTerms} scrollRef={rawInputScrollRef} />
                   </div>
                   {/* Panel footer */}
@@ -973,7 +1235,7 @@ export default function FloraDemo() {
                     flexShrink: 0,
                   }}>
                     <div style={{ fontSize: 11, color: T.textTertiary, lineHeight: 1.5 }}>
-                      <span style={{ fontWeight: 600, color: T.textSecondary }}>This is exactly what Flora received.</span> Every field on the right was extracted from this raw text — nothing added, nothing assumed.
+                      <span style={{ fontWeight: 600, color: T.textSecondary }}>This is exactly what Flora received.</span> Every field on the right was extracted from this {processingImage ? "document" : "raw text"} — nothing added, nothing assumed.
                     </div>
                   </div>
                 </div>
@@ -1000,7 +1262,7 @@ export default function FloraDemo() {
                 fontFamily: T.fontMono, fontSize: 11, fontWeight: 600,
                 color: T.accent, letterSpacing: "0.5px", marginBottom: 20,
               }}>
-                <span style={{ width: 6, height: 6, borderRadius: "50%", background: T.accent, animation: "ofspin 3s linear infinite" }} />
+                <span style={{ width: 6, height: 6, borderRadius: "50%", background: T.green, animation: "ofpulse 2s ease-in-out infinite" }} />
                 LIVE DEMO
               </div>
               <h1 style={{ fontSize: "clamp(28px, 4.5vw, 44px)", fontWeight: 700, lineHeight: 1.15, letterSpacing: "-0.8px", marginBottom: 14, color: T.text }}>
@@ -1041,34 +1303,55 @@ export default function FloraDemo() {
                   <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(165px, 1fr))", gap: 10, marginBottom: 20 }}>
                     {SAMPLE_ORDERS.map(s => (
                       <button key={s.id} onClick={() => { setSelectedSample(s.id); setResult(null); setError(null); }} style={{
-                        ...btnBase, padding: "18px 14px", borderRadius: T.radius, textAlign: "left",
+                        ...btnBase, padding: 0, borderRadius: T.radius, textAlign: "left",
                         border: selectedSample === s.id ? `2px solid ${T.accent}` : `1px solid ${T.border}`,
                         background: selectedSample === s.id ? T.accentLight : T.surface,
-                        display: "flex", flexDirection: "column", gap: 8,
+                        display: "flex", flexDirection: "column", overflow: "hidden",
                       }}>
-                        <span style={{ fontSize: 22 }}>{s.icon}</span>
-                        <span style={{ fontWeight: 700, fontSize: 13, color: selectedSample === s.id ? T.accent : T.text }}>{s.label}</span>
-                        <span style={{ fontSize: 12, color: T.textTertiary, lineHeight: 1.4 }}>{s.description}</span>
+                        {s.image ? (
+                          <div style={{ width: "100%", height: 100, overflow: "hidden", borderBottom: `1px solid ${T.borderLight}`, background: "#F5F5F4" }}>
+                            <img src={s.image} alt={s.label} style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "top", opacity: 0.85 }} />
+                          </div>
+                        ) : (
+                          <div style={{ padding: "14px 14px 0" }}>
+                            <span style={{ fontSize: 22 }}>{s.icon}</span>
+                          </div>
+                        )}
+                        <div style={{ padding: s.image ? "10px 14px 14px" : "8px 14px 14px", display: "flex", flexDirection: "column", gap: 4 }}>
+                          <span style={{ fontWeight: 700, fontSize: 13, color: selectedSample === s.id ? T.accent : T.text }}>{s.label}</span>
+                          <span style={{ fontSize: 12, color: T.textTertiary, lineHeight: 1.4 }}>{s.description}</span>
+                        </div>
                       </button>
                     ))}
                   </div>
-                  {selectedSample && (
+                  {selectedSample && (() => {
+                    const selectedOrder = SAMPLE_ORDERS.find(s => s.id === selectedSample);
+                    return (
                     <div style={{ animation: "offade 0.2s ease" }}>
-                      <div style={{ background: T.surface, borderRadius: T.radius, border: `1px solid ${T.border}`, marginBottom: 14, maxHeight: 280, overflow: "auto" }}>
+                      <div style={{ background: T.surface, borderRadius: T.radius, border: `1px solid ${T.border}`, marginBottom: 14, maxHeight: 340, overflow: "auto" }}>
                         <div style={{ padding: "10px 16px", borderBottom: `1px solid ${T.borderLight}`, position: "sticky", top: 0, background: T.surface, zIndex: 1 }}>
-                          <span style={{ fontFamily: T.fontMono, fontSize: 10, fontWeight: 700, color: T.textTertiary, textTransform: "uppercase", letterSpacing: "0.5px" }}>Raw Input Preview</span>
+                          <span style={{ fontFamily: T.fontMono, fontSize: 10, fontWeight: 700, color: T.textTertiary, textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                            {selectedOrder?.image ? "Document Preview" : "Raw Input Preview"}
+                          </span>
                         </div>
-                        <pre style={{ padding: 16, fontFamily: T.fontMono, fontSize: 12, color: T.textSecondary, lineHeight: 1.65, whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
-                          {SAMPLE_ORDERS.find(s => s.id === selectedSample)?.content}
-                        </pre>
+                        {selectedOrder?.image ? (
+                          <div style={{ padding: 8, background: "#F8F8F6" }}>
+                            <img src={selectedOrder.image} alt={selectedOrder.label} style={{ width: "100%", borderRadius: 4, display: "block" }} />
+                          </div>
+                        ) : (
+                          <pre style={{ padding: 16, fontFamily: T.fontMono, fontSize: 12, color: T.textSecondary, lineHeight: 1.65, whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
+                            {selectedOrder?.content}
+                          </pre>
+                        )}
                       </div>
-                      <button onClick={() => { const s = SAMPLE_ORDERS.find(x => x.id === selectedSample); if (s) extractOrder(s.content, s.label); }}
+                      <button onClick={() => { if (selectedOrder) extractOrder(selectedOrder.content, selectedOrder.label, selectedOrder.image); }}
                         style={{ ...btnBase, width: "100%", padding: 16, borderRadius: T.radius, background: T.accent, color: "#fff", fontWeight: 700, fontSize: 14, boxShadow: `0 1px 3px ${T.accent}30` }}
                         onMouseEnter={e => { e.target.style.background = T.accentDark; }}
                         onMouseLeave={e => { e.target.style.background = T.accent; }}
                       >Extract & Match to Catalog →</button>
                     </div>
-                  )}
+                    );
+                  })()}
                 </div>
               )}
 
