@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useEffect, useMemo } from "react";
+import { useState, useRef, useCallback, useEffect, useMemo, Fragment } from "react";
 
 // ─── Demo SKU Catalog Database ──────────────────────────────────────────────
 // This simulates a real product catalog / ERP system that extracted items get matched against
@@ -171,13 +171,13 @@ CRITICAL EXTRACTION RULES:
 - Flag any ambiguities or items that need clarification
 - If pricing is present, include it. If not, omit price fields.
 
-Additionally, generate a "validation_items" array for any extracted field that is incomplete, ambiguous, or would need human confirmation before submitting to an ERP system. Common cases include:
-- Dates without a year (e.g. "Dec 5th" — which year?)
-- Vague delivery timing (e.g. "Thursday morning", "ASAP", "by end of week")
-- Approximate quantities (e.g. "about 40", "15 or maybe 20")
-- Relative references (e.g. "same address as last time", "the usual")
-- Missing required fields (e.g. no PO number, no delivery address)
-- Ambiguous product references (e.g. "the blue ones", "same one we got last time")
+Additionally, generate a "validation_items" array for any extracted field that is incomplete, ambiguous, or would need human confirmation before submitting to an ERP system. For each item, ALWAYS provide your best-effort assumption in "assumed_value" — what you would fill in if forced to guess. The human reviewer will verify or correct your assumption. Common cases include:
+- Dates without a year (e.g. "Dec 5th" → assume the next upcoming Dec 5th, e.g. "2026-12-05")
+- Vague delivery timing (e.g. "Thursday morning" → assume the next Thursday, provide ISO date; "ASAP" → assume tomorrow's date)
+- Approximate quantities (e.g. "about 40" → assume 40; "15 or maybe 20" → assume 20, the higher value)
+- Relative references (e.g. "same address as last time" → assumed_value: null, flag for lookup)
+- Missing required fields (e.g. no PO number → assumed_value: null; no delivery address → assumed_value: null)
+- Ambiguous product references (e.g. "the blue ones" → assumed_value: null, flag for clarification)
 
 Respond with ONLY valid JSON in this exact structure, no markdown fences:
 {
@@ -188,6 +188,7 @@ Respond with ONLY valid JSON in this exact structure, no markdown fences:
     "phone": "string or null"
   },
   "po_reference": "string or null",
+  "order_date": "string or null — the date the order was placed or the document was created (e.g. email send date, PO date, conversation date). Use ISO format YYYY-MM-DD when possible.",
   "delivery": {
     "address": "string or null",
     "requested_date": "string or null",
@@ -216,8 +217,9 @@ Respond with ONLY valid JSON in this exact structure, no markdown fences:
     {
       "field": "string (e.g. 'delivery.requested_date', 'line_items[2].quantity', 'delivery.address')",
       "extracted_value": "string — the exact text extracted from the source",
+      "assumed_value": "string or null — your best-effort assumption for what this field should be (e.g. '2026-12-05' for 'Dec 5th', '40' for 'about 40'). null only when truly unknowable.",
       "issue": "incomplete_date" | "vague_timing" | "approximate_quantity" | "relative_reference" | "missing_field" | "ambiguous_product",
-      "message": "string — human-readable explanation of what needs confirming",
+      "message": "string — human-readable explanation of the assumption made and what needs verifying",
       "suggested_action": "string — what the system would prompt the user to do"
     }
   ],
@@ -398,9 +400,9 @@ function ValidationPanel({ items, onHighlight }) {
       <div style={{ padding: "12px 16px", borderRadius: T.radiusSm, background: T.orangeLight, border: `1px solid ${T.orangeBorder}`, display: "flex", gap: 10, alignItems: "flex-start" }}>
         <span style={{ fontSize: 16, flexShrink: 0, marginTop: 1 }}>🎯</span>
         <div>
-          <div style={{ fontSize: 13, fontWeight: 600, color: "#9A3412", marginBottom: 3 }}>Literal extraction — nothing assumed</div>
+          <div style={{ fontSize: 13, fontWeight: 600, color: "#9A3412", marginBottom: 3 }}>Best-effort assumptions — please verify</div>
           <div style={{ fontSize: 12, color: "#C2410C", lineHeight: 1.55 }}>
-            Flora extracts data exactly as written in the source. When a field is incomplete or ambiguous, it flags it for confirmation rather than guessing. This prevents errors that silently propagate into your ERP.
+            Flora made its best guess for ambiguous or incomplete fields and pre-filled the draft. Review the assumed values below and correct anything that doesn&apos;t look right before submitting.
           </div>
         </div>
       </div>
@@ -409,7 +411,7 @@ function ValidationPanel({ items, onHighlight }) {
       <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
         <thead>
           <tr style={{ borderBottom: `2px solid ${T.border}` }}>
-            {["Issue", "Extracted Value", "Problem", "Action Required"].map(h => (
+            {["Issue", "Extracted", "Assumed Value", "Action"].map(h => (
               <th key={h} style={{ padding: "8px 12px", textAlign: "left", fontFamily: T.fontMono, fontSize: 10, fontWeight: 700, color: T.textTertiary, textTransform: "uppercase", letterSpacing: "0.5px", whiteSpace: "nowrap" }}>{h}</th>
             ))}
           </tr>
@@ -429,9 +431,15 @@ function ValidationPanel({ items, onHighlight }) {
                 </div>
               </td>
               <td style={{ padding: "10px 12px" }}>
-                <code style={{ fontFamily: T.fontMono, fontSize: 12, fontWeight: 600, color: T.text, background: T.orangeLight, padding: "2px 8px", borderRadius: 4, border: `1px solid ${T.orangeBorder}` }}>{item.extracted_value}</code>
+                <code style={{ fontFamily: T.fontMono, fontSize: 12, fontWeight: 600, color: T.text, background: T.orangeLight, padding: "2px 8px", borderRadius: 4, border: `1px solid ${T.orangeBorder}` }}>{item.extracted_value || "—"}</code>
               </td>
-              <td style={{ padding: "10px 12px", fontSize: 12, color: T.textSecondary, lineHeight: 1.5, maxWidth: 220 }}>{item.message}</td>
+              <td style={{ padding: "10px 12px" }}>
+                {item.assumed_value ? (
+                  <code style={{ fontFamily: T.fontMono, fontSize: 12, fontWeight: 600, color: T.green, background: T.greenLight, padding: "2px 8px", borderRadius: 4, border: `1px solid ${T.greenBorder}` }}>{item.assumed_value}</code>
+                ) : (
+                  <span style={{ fontFamily: T.fontMono, fontSize: 11, color: T.textTertiary }}>—</span>
+                )}
+              </td>
               <td style={{ padding: "10px 12px" }}>
                 <span style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "4px 10px", borderRadius: T.radiusSm, background: T.accentLight, border: "1px solid #BFDBFE", fontSize: 11, fontWeight: 600, color: T.accent, cursor: "default" }}>
                   {item.suggested_action}
@@ -466,7 +474,7 @@ const draftLabelStyle = {
   textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 5, display: "block",
 };
 
-function DraftSalesOrder({ draftOrder, setDraftOrder, catalog }) {
+function DraftSalesOrder({ draftOrder, setDraftOrder, catalog, onHighlight, extractionData, validationItems }) {
   const updateHeader = (field, value) => setDraftOrder(prev => ({ ...prev, header: { ...prev.header, [field]: value } }));
   const updateShipping = (field, value) => setDraftOrder(prev => ({ ...prev, shipping: { ...prev.shipping, [field]: value } }));
   const updateLineItem = (id, field, value) => setDraftOrder(prev => ({
@@ -483,13 +491,57 @@ function DraftSalesOrder({ draftOrder, setDraftOrder, catalog }) {
     }));
   };
 
+  // Highlight helpers
+  const hl = (terms) => onHighlight?.(terms);
+  const clearHl = () => onHighlight?.([]);
+
+  // Flag lookup: map validation field paths to draft field keys
+  const flaggedFields = useMemo(() => {
+    if (!validationItems || validationItems.length === 0) return {};
+    const map = {};
+    for (const item of validationItems) {
+      const f = item.field || "";
+      if (f.includes("po_reference")) map.poNumber = item;
+      if (f.includes("requested_date") || f.includes("delivery_date")) map.deliveryDate = item;
+      if (f.includes("address")) map.shipTo = item;
+      if (f.includes("customer") && !f.includes("contact")) map.customer = item;
+      const lm = f.match(/line_items\[(\d+)\]/);
+      if (lm) { if (!map.lineItems) map.lineItems = {}; map.lineItems[parseInt(lm[1], 10)] = item; }
+    }
+    return map;
+  }, [validationItems]);
+
+  const flagStyle = (base, key) => {
+    const flag = typeof key === "number" ? flaggedFields.lineItems?.[key] : flaggedFields[key];
+    if (!flag) return base;
+    return { ...base, borderColor: T.amberBorder, background: T.amberLight };
+  };
+
+  const FieldFlag = ({ fieldKey }) => {
+    const flag = typeof fieldKey === "number" ? flaggedFields.lineItems?.[fieldKey] : flaggedFields[fieldKey];
+    if (!flag) return null;
+    const assumed = flag.assumed_value;
+    return (
+      <div style={{ marginTop: 4, fontSize: 11, lineHeight: 1.4 }}>
+        {assumed ? (
+          <div style={{ display: "flex", alignItems: "baseline", gap: 4, color: T.amber }}>
+            <span style={{ flexShrink: 0 }}>⚠️</span>
+            <span>Assumed <strong style={{ color: T.text }}>{assumed}</strong> from &ldquo;{flag.extracted_value}&rdquo; &mdash; <span style={{ textDecoration: "underline", cursor: "default" }}>verify</span></span>
+          </div>
+        ) : (
+          <div style={{ display: "flex", alignItems: "center", gap: 4, color: T.amber }}>⚠️ {flag.message}</div>
+        )}
+      </div>
+    );
+  };
+
   const subtotal = draftOrder.lineItems.reduce((sum, li) => sum + (li.quantity || 0) * (li.rate || 0), 0);
   const tax = subtotal * draftOrder.taxRate;
   const total = subtotal + tax + (draftOrder.shippingCost || 0);
   const fmt = (n) => n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: 16, background: T.surface, borderRadius: T.radiusLg, border: `1px solid ${T.border}`, padding: "20px 22px" }}>
 
       {/* ERP Form Header Bar */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px", background: "#F8FAFC", borderRadius: 8, border: `1px solid ${T.border}` }}>
@@ -504,17 +556,19 @@ function DraftSalesOrder({ draftOrder, setDraftOrder, catalog }) {
       <div>
         <div style={{ ...draftLabelStyle, marginBottom: 10, fontSize: 10 }}>Primary Information</div>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12 }}>
-          <div>
+          <div onMouseEnter={() => hl([extractionData?.customer?.name, extractionData?.customer?.contact_person, extractionData?.customer?.email, extractionData?.customer?.phone].filter(Boolean))} onMouseLeave={clearHl}>
             <label style={draftLabelStyle}>Customer</label>
-            <input style={draftInputStyle} value={draftOrder.header.customer} onChange={e => updateHeader("customer", e.target.value)} />
+            <input style={flagStyle(draftInputStyle, "customer")} value={draftOrder.header.customer} onChange={e => updateHeader("customer", e.target.value)} />
+            <FieldFlag fieldKey="customer" />
           </div>
           <div>
             <label style={draftLabelStyle}>Date</label>
             <input type="date" style={draftInputStyle} value={draftOrder.header.date} onChange={e => updateHeader("date", e.target.value)} />
           </div>
-          <div>
+          <div onMouseEnter={() => hl([extractionData?.po_reference].filter(Boolean))} onMouseLeave={clearHl}>
             <label style={draftLabelStyle}>PO Number</label>
-            <input style={draftInputStyle} value={draftOrder.header.poNumber} onChange={e => updateHeader("poNumber", e.target.value)} placeholder="Customer PO #" />
+            <input style={flagStyle(draftInputStyle, "poNumber")} value={draftOrder.header.poNumber} onChange={e => updateHeader("poNumber", e.target.value)} placeholder="Customer PO #" />
+            <FieldFlag fieldKey="poNumber" />
           </div>
           <div>
             <label style={draftLabelStyle}>Status</label>
@@ -541,13 +595,15 @@ function DraftSalesOrder({ draftOrder, setDraftOrder, catalog }) {
       <div style={{ borderTop: `1px solid ${T.borderLight}`, paddingTop: 16 }}>
         <div style={{ ...draftLabelStyle, marginBottom: 10, fontSize: 10 }}>Shipping</div>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-          <div style={{ gridRow: "span 2" }}>
+          <div style={{ gridRow: "span 2" }} onMouseEnter={() => { const addr = extractionData?.delivery?.address; if (!addr) return clearHl(); const parts = addr.split(/,\s*/).filter(p => p.length > 3); hl(parts.length > 0 ? parts : [addr]); }} onMouseLeave={clearHl}>
             <label style={draftLabelStyle}>Ship To</label>
-            <textarea style={{ ...draftInputStyle, resize: "vertical", minHeight: 68 }} value={draftOrder.shipping.shipTo} onChange={e => updateShipping("shipTo", e.target.value)} rows={3} />
+            <textarea style={{ ...flagStyle(draftInputStyle, "shipTo"), resize: "vertical", minHeight: 68 }} value={draftOrder.shipping.shipTo} onChange={e => updateShipping("shipTo", e.target.value)} rows={3} />
+            <FieldFlag fieldKey="shipTo" />
           </div>
-          <div>
+          <div onMouseEnter={() => hl([extractionData?.delivery?.requested_date].filter(Boolean))} onMouseLeave={clearHl}>
             <label style={draftLabelStyle}>Requested Delivery</label>
-            <input type="date" style={draftInputStyle} value={draftOrder.shipping.requestedDate} onChange={e => updateShipping("requestedDate", e.target.value)} />
+            <input type="date" style={flagStyle(draftInputStyle, "deliveryDate")} value={draftOrder.shipping.requestedDate} onChange={e => updateShipping("requestedDate", e.target.value)} />
+            <FieldFlag fieldKey="deliveryDate" />
           </div>
           <div>
             <label style={draftLabelStyle}>Shipping Method</label>
@@ -572,10 +628,17 @@ function DraftSalesOrder({ draftOrder, setDraftOrder, catalog }) {
                 </tr>
               </thead>
               <tbody>
-                {draftOrder.lineItems.map((li, i) => (
-                  <tr key={li.id} style={{ borderBottom: `1px solid ${T.borderLight}`, background: i % 2 === 1 ? "#FAFAF9" : "transparent" }}>
+                {draftOrder.lineItems.map((li, i) => {
+                  const origItem = extractionData?.line_items?.[i];
+                  const lineFlag = flaggedFields.lineItems?.[i];
+                  return (
+                  <Fragment key={li.id}>
+                  <tr
+                    className="flora-hover-row"
+                    style={{ borderBottom: lineFlag ? "none" : `1px solid ${T.borderLight}`, background: lineFlag ? T.amberLight : (i % 2 === 1 ? "#FAFAF9" : "transparent"), transition: "background 0.1s ease" }}
+                  >
                     <td style={{ padding: "8px 10px", color: T.textTertiary, fontFamily: T.fontMono, fontSize: 11, width: 32 }}>{li.id}</td>
-                    <td style={{ padding: "8px 6px", minWidth: 200 }}>
+                    <td style={{ padding: "8px 6px", minWidth: 200 }} onMouseEnter={() => hl([origItem?.sku, li.catalogSku, origItem?.description].filter(Boolean))} onMouseLeave={clearHl}>
                       <select style={{ ...draftSelectStyle, fontSize: 11, padding: "5px 6px" }} value={li.catalogSku} onChange={e => handleSkuChange(li.id, e.target.value)}>
                         <option value="">-- Select Item --</option>
                         {Object.entries(CATALOG_BY_CATEGORY).map(([cat, items]) => (
@@ -585,21 +648,38 @@ function DraftSalesOrder({ draftOrder, setDraftOrder, catalog }) {
                         ))}
                       </select>
                     </td>
-                    <td style={{ padding: "8px 6px", minWidth: 160 }}>
+                    <td style={{ padding: "8px 6px", minWidth: 160 }} onMouseEnter={() => hl([origItem?.description, li.description].filter(Boolean))} onMouseLeave={clearHl}>
                       <input style={{ ...draftInputStyle, fontSize: 12, padding: "5px 8px" }} value={li.description} onChange={e => updateLineItem(li.id, "description", e.target.value)} />
                     </td>
-                    <td style={{ padding: "8px 6px", width: 80 }}>
-                      <input type="number" min="0" style={{ ...draftInputStyle, fontSize: 12, padding: "5px 8px", fontFamily: T.fontMono, textAlign: "right", minWidth: 60 }} value={li.quantity} onChange={e => updateLineItem(li.id, "quantity", parseFloat(e.target.value) || 0)} />
+                    <td style={{ padding: "8px 6px", width: 80 }} onMouseEnter={() => hl([origItem?.quantity != null ? String(origItem.quantity) : null, lineFlag?.extracted_value].filter(Boolean))} onMouseLeave={clearHl}>
+                      <input type="number" min="0" style={{ ...draftInputStyle, fontSize: 12, padding: "5px 8px", fontFamily: T.fontMono, textAlign: "right", minWidth: 60, ...(lineFlag ? { borderColor: T.amberBorder, background: T.amberLight } : {}) }} value={li.quantity} onChange={e => updateLineItem(li.id, "quantity", parseFloat(e.target.value) || 0)} />
                     </td>
-                    <td style={{ padding: "8px 10px", fontFamily: T.fontMono, fontSize: 11, color: T.textSecondary, whiteSpace: "nowrap" }}>{li.uom || "—"}</td>
-                    <td style={{ padding: "8px 6px", width: 95 }}>
+                    <td style={{ padding: "8px 10px", fontFamily: T.fontMono, fontSize: 11, color: T.textSecondary, whiteSpace: "nowrap" }} onMouseEnter={() => hl([origItem?.uom].filter(Boolean))} onMouseLeave={clearHl}>{li.uom || "—"}</td>
+                    <td style={{ padding: "8px 6px", width: 95 }} onMouseEnter={() => hl([origItem?.unit_price != null ? String(origItem.unit_price) : null].filter(Boolean))} onMouseLeave={clearHl}>
                       <input type="number" min="0" step="0.01" style={{ ...draftInputStyle, fontSize: 12, padding: "5px 8px", fontFamily: T.fontMono, textAlign: "right", minWidth: 70 }} value={li.rate} onChange={e => updateLineItem(li.id, "rate", parseFloat(e.target.value) || 0)} />
                     </td>
-                    <td style={{ padding: "8px 10px", fontFamily: T.fontMono, fontSize: 12, fontWeight: 600, color: T.text, textAlign: "right", width: 90 }}>
+                    <td style={{ padding: "8px 10px", fontFamily: T.fontMono, fontSize: 12, fontWeight: 600, color: T.text, textAlign: "right", width: 90 }} onMouseEnter={() => hl([origItem?.ext_price != null ? String(origItem.ext_price) : null].filter(Boolean))} onMouseLeave={clearHl}>
                       ${fmt((li.quantity || 0) * (li.rate || 0))}
                     </td>
                   </tr>
-                ))}
+                  {lineFlag && (
+                    <tr style={{ background: T.amberLight, borderBottom: `1px solid ${T.borderLight}` }}>
+                      <td style={{ padding: "0 10px 8px" }}></td>
+                      <td colSpan={6} style={{ padding: "0 6px 8px" }}>
+                        <div style={{ display: "flex", alignItems: "baseline", gap: 5, fontSize: 11, lineHeight: 1.3 }}>
+                          <span style={{ color: T.amber, flexShrink: 0 }}>⚠️</span>
+                          {lineFlag.assumed_value ? (
+                            <span style={{ color: T.amber }}>Assumed <strong style={{ color: T.text }}>{lineFlag.assumed_value}</strong> from &ldquo;{lineFlag.extracted_value}&rdquo; &mdash; <span style={{ textDecoration: "underline", cursor: "default" }}>verify</span></span>
+                          ) : (
+                            <span style={{ color: T.amber }}>{lineFlag.message}</span>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                  </Fragment>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -737,7 +817,7 @@ function HighlightedRawInput({ text, terms, scrollRef }) {
 
 function ResultsView({ data, onHighlight }) {
   if (!data) return null;
-  const { customer, po_reference, delivery, line_items, flags, totals, validation_items } = data;
+  const { customer, po_reference, order_date, delivery, line_items, flags, totals, validation_items } = data;
   const hl = (terms) => onHighlight?.(terms);
   const clearHl = () => onHighlight?.([]);
 
@@ -756,41 +836,56 @@ function ResultsView({ data, onHighlight }) {
 
   const valItems = validation_items || [];
 
-  // ── Draft Sales Order state (editable form for Step 4) ──
+  // ── Draft Sales Order state ──
   const [draftOrder, setDraftOrder] = useState(null);
   const draftInitialized = useRef(false);
+  const [showPipeline, setShowPipeline] = useState(false);
 
   useEffect(() => {
     if (!draftInitialized.current && matchedItems.length > 0) {
       draftInitialized.current = true;
       const today = new Date().toISOString().split("T")[0];
-      // Best-effort parse of requested date to ISO format
-      let reqDate = "";
-      if (delivery?.requested_date) {
-        const parsed = new Date(delivery.requested_date);
-        if (!isNaN(parsed.getTime())) reqDate = parsed.toISOString().split("T")[0];
-      }
+
+      // Helper: find assumed_value for a validation field path
+      const assumed = (fieldPath) => valItems.find(v => v.field?.includes(fieldPath))?.assumed_value || "";
+
+      // Helper: parse a date string to ISO YYYY-MM-DD, returns "" if unparseable
+      const toISO = (dateStr) => {
+        if (!dateStr) return "";
+        const d = new Date(dateStr);
+        return !isNaN(d.getTime()) ? d.toISOString().split("T")[0] : "";
+      };
+
+      // Use extracted order_date, falling back to today
+      const orderDate = toISO(order_date) || today;
+
+      // Best-effort parse of requested date to ISO format, falling back to assumed_value
+      const reqDate = toISO(delivery?.requested_date) || toISO(assumed("requested_date"));
+
       setDraftOrder({
         header: {
-          customer: customer?.name || "",
-          date: today,
-          poNumber: po_reference || "",
+          customer: customer?.name || assumed("customer") || "",
+          date: orderDate,
+          poNumber: po_reference || assumed("po_reference") || "",
           terms: "Net 30",
           salesRep: "",
           memo: "",
         },
         shipping: {
-          shipTo: delivery?.address || "",
+          shipTo: delivery?.address || assumed("address") || "",
           requestedDate: reqDate,
           shippingMethod: "Standard Ground",
         },
         lineItems: matchedItems.map((item, i) => {
           const cat = item.match?.catalogItem;
+          // Check for assumed quantity on this line item
+          const lineAssumed = valItems.find(v => v.field === `line_items[${i}].quantity`);
+          const qty = item.quantity || (lineAssumed?.assumed_value ? parseFloat(lineAssumed.assumed_value) : 0);
           return {
             id: i + 1,
             catalogSku: cat?.sku || "",
             description: cat?.name || item.description,
-            quantity: item.quantity || 0,
+            quantity: qty,
             uom: cat?.uom || item.uom || "",
             rate: cat?.price || item.unit_price || 0,
           };
@@ -804,174 +899,201 @@ function ResultsView({ data, onHighlight }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
 
-      {/* ── Automation Pipeline ── */}
-      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-        <div style={{ fontFamily: T.fontMono, fontSize: 10, fontWeight: 700, color: T.textTertiary, textTransform: "uppercase", letterSpacing: "1px", marginBottom: 4 }}>Automation Pipeline</div>
+      {/* ── Draft Sales Order (hero content at top) ── */}
+      {draftOrder && (
+        <DraftSalesOrder
+          draftOrder={draftOrder}
+          setDraftOrder={setDraftOrder}
+          catalog={DEMO_CATALOG}
+          onHighlight={onHighlight}
+          extractionData={{ customer, po_reference, delivery, line_items }}
+          validationItems={valItems}
+        />
+      )}
 
-        <StepCard number="1" title="Extract Order Data" description="AI parsed raw input into structured line items, customer info, and delivery details." status="complete">
-          {/* Info tiles */}
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 10, marginBottom: 16 }}>
-            <InfoTile icon="🏢" label="Customer" value={customer?.name} sub={customer?.contact_person}
-              onMouseEnter={() => hl([customer?.name, customer?.contact_person, customer?.email, customer?.phone].filter(Boolean))}
-              onMouseLeave={clearHl}
-            />
-            <InfoTile icon="📋" label="PO Reference" value={po_reference}
-              validationWarning={valItems.find(v => v.field?.includes("po_reference"))?.message}
-              onMouseEnter={() => hl([po_reference].filter(Boolean))}
-              onMouseLeave={clearHl}
-            />
-            <InfoTile icon="📅" label="Delivery Date" value={delivery?.requested_date}
-              validationWarning={valItems.find(v => v.field?.includes("requested_date"))?.message}
-              onMouseEnter={() => hl([delivery?.requested_date].filter(Boolean))}
-              onMouseLeave={clearHl}
-            />
-            <InfoTile icon="📍" label="Ship To" value={delivery?.address}
-              validationWarning={valItems.find(v => v.field?.includes("address"))?.message}
-              onMouseEnter={() => {
-                const addr = delivery?.address;
-                if (!addr) return clearHl();
-                const parts = addr.split(/,\s*/).filter(p => p.length > 3);
-                hl(parts.length > 0 ? parts : [addr]);
-              }}
-              onMouseLeave={clearHl}
-            />
-          </div>
+      {/* ── "See how Flora did it" expandable section ── */}
+      <div>
+        <button
+          onClick={() => setShowPipeline(prev => !prev)}
+          style={{
+            display: "flex", alignItems: "center", gap: 10, width: "100%", padding: "14px 18px",
+            background: T.surface, border: `1px solid ${T.border}`, borderRadius: T.radius,
+            cursor: "pointer", fontFamily: T.font, fontSize: 14, fontWeight: 600, color: T.textSecondary,
+            transition: "all 0.15s ease",
+          }}
+          onMouseEnter={e => { e.currentTarget.style.borderColor = T.accent; e.currentTarget.style.color = T.text; }}
+          onMouseLeave={e => { e.currentTarget.style.borderColor = T.border; e.currentTarget.style.color = T.textSecondary; }}
+        >
+          <span style={{ transform: showPipeline ? "rotate(90deg)" : "rotate(0deg)", transition: "transform 0.2s ease", fontSize: 11, lineHeight: 1 }}>&#9654;</span>
+          See how Flora did it
+          <span style={{ fontFamily: T.fontMono, fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 999, background: T.surfaceHover, color: T.textTertiary, border: `1px solid ${T.border}`, marginLeft: "auto" }}>3 steps</span>
+        </button>
 
-          {/* Line Items Table */}
-          <div style={{ background: T.surface, borderRadius: T.radiusLg, border: `1px solid ${T.border}`, overflow: "hidden" }}>
-            <div style={{ padding: "14px 20px", borderBottom: `1px solid ${T.borderLight}`, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-              <span style={{ fontFamily: T.fontMono, fontSize: 10, fontWeight: 700, color: T.textTertiary, textTransform: "uppercase", letterSpacing: "1px" }}>Extracted Line Items</span>
-              <span style={{ fontFamily: T.fontMono, fontSize: 11, color: T.textTertiary }}>{line_items?.length || 0} items</span>
-            </div>
-            <div style={{ overflowX: "auto" }}>
-              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
-                <thead>
-                  <tr style={{ borderBottom: `2px solid ${T.border}` }}>
-                    {["#", "Description", "SKU", "Qty", "UoM", "Unit $", "Ext $", "Confidence"].map(h => (
-                      <th key={h} style={{ padding: "10px 14px", textAlign: "left", fontFamily: T.fontMono, fontSize: 10, fontWeight: 700, color: T.textTertiary, textTransform: "uppercase", letterSpacing: "0.5px", whiteSpace: "nowrap" }}>{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {line_items?.map((item, i) => (
-                    <tr key={i}
-                      className="flora-hover-row"
-                      onMouseEnter={() => hl([item.description, item.sku, item.notes].filter(Boolean))}
-                      onMouseLeave={clearHl}
-                      style={{ borderBottom: `1px solid ${T.borderLight}`, background: i % 2 === 1 ? "#FAFAF9" : "transparent", cursor: "default", transition: "background 0.1s ease" }}
-                    >
-                      <td style={{ padding: "12px 14px", color: T.textTertiary, fontFamily: T.fontMono, fontSize: 11 }}>{item.line}</td>
-                      <td style={{ padding: "12px 14px", fontWeight: 500, color: T.text, maxWidth: 260 }}>
-                        {item.description}
-                        {item.notes && <div style={{ fontSize: 12, color: T.textTertiary, marginTop: 3, fontStyle: "italic" }}>{item.notes}</div>}
-                      </td>
-                      <td style={{ padding: "12px 14px", fontFamily: T.fontMono, fontSize: 11, color: T.accent, fontWeight: 500 }}>{item.sku || "—"}</td>
-                      <td style={{ padding: "12px 14px", fontFamily: T.fontMono, fontWeight: 700, color: T.text }}>{item.quantity}</td>
-                      <td style={{ padding: "12px 14px", color: T.textSecondary, fontSize: 12 }}>{item.uom}</td>
-                      <td style={{ padding: "12px 14px", fontFamily: T.fontMono, fontSize: 12, color: T.textSecondary }}>{item.unit_price != null ? `$${item.unit_price.toFixed(2)}` : "—"}</td>
-                      <td style={{ padding: "12px 14px", fontFamily: T.fontMono, fontSize: 12, color: T.text, fontWeight: 500 }}>{item.ext_price != null ? `$${item.ext_price.toFixed(2)}` : "—"}</td>
-                      <td style={{ padding: "12px 14px" }}><ConfidencePill level={item.confidence} /></td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            {totals?.total != null && (
-              <div style={{ borderTop: `1px solid ${T.border}`, padding: "14px 20px", display: "flex", justifyContent: "flex-end", gap: 28 }}>
-                {totals.subtotal != null && <div style={{ textAlign: "right" }}><div style={{ fontFamily: T.fontMono, fontSize: 10, color: T.textTertiary, textTransform: "uppercase" }}>Subtotal</div><div style={{ fontFamily: T.fontMono, fontSize: 14, fontWeight: 600 }}>${totals.subtotal.toLocaleString("en-US", { minimumFractionDigits: 2 })}</div></div>}
-                {totals.tax != null && <div style={{ textAlign: "right" }}><div style={{ fontFamily: T.fontMono, fontSize: 10, color: T.textTertiary, textTransform: "uppercase" }}>Tax</div><div style={{ fontFamily: T.fontMono, fontSize: 14, fontWeight: 600 }}>${totals.tax.toLocaleString("en-US", { minimumFractionDigits: 2 })}</div></div>}
-                {totals.freight != null && <div style={{ textAlign: "right" }}><div style={{ fontFamily: T.fontMono, fontSize: 10, color: T.textTertiary, textTransform: "uppercase" }}>Freight</div><div style={{ fontFamily: T.fontMono, fontSize: 14, fontWeight: 600 }}>${totals.freight.toLocaleString("en-US", { minimumFractionDigits: 2 })}</div></div>}
-                {totals.total != null && <div style={{ textAlign: "right" }}><div style={{ fontFamily: T.fontMono, fontSize: 10, color: T.accent, textTransform: "uppercase", fontWeight: 700 }}>Total</div><div style={{ fontFamily: T.fontMono, fontSize: 18, fontWeight: 800, color: T.accent }}>${totals.total.toLocaleString("en-US", { minimumFractionDigits: 2 })}</div></div>}
+        {showPipeline && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 12, marginTop: 12, animation: "offade 0.2s ease" }}>
+
+            <StepCard number="1" title="Extract Order Data" description="AI parsed raw input into structured line items, customer info, and delivery details." status="complete">
+              {/* Info tiles */}
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 10, marginBottom: 16 }}>
+                <InfoTile icon="🏢" label="Customer" value={customer?.name} sub={customer?.contact_person}
+                  onMouseEnter={() => hl([customer?.name, customer?.contact_person, customer?.email, customer?.phone].filter(Boolean))}
+                  onMouseLeave={clearHl}
+                />
+                <InfoTile icon="📋" label="PO Reference" value={po_reference}
+                  validationWarning={valItems.find(v => v.field?.includes("po_reference"))?.message}
+                  onMouseEnter={() => hl([po_reference].filter(Boolean))}
+                  onMouseLeave={clearHl}
+                />
+                <InfoTile icon="📅" label="Delivery Date" value={delivery?.requested_date}
+                  validationWarning={valItems.find(v => v.field?.includes("requested_date"))?.message}
+                  onMouseEnter={() => hl([delivery?.requested_date].filter(Boolean))}
+                  onMouseLeave={clearHl}
+                />
+                <InfoTile icon="📍" label="Ship To" value={delivery?.address}
+                  validationWarning={valItems.find(v => v.field?.includes("address"))?.message}
+                  onMouseEnter={() => {
+                    const addr = delivery?.address;
+                    if (!addr) return clearHl();
+                    const parts = addr.split(/,\s*/).filter(p => p.length > 3);
+                    hl(parts.length > 0 ? parts : [addr]);
+                  }}
+                  onMouseLeave={clearHl}
+                />
               </div>
-            )}
-          </div>
 
-          {/* Flags */}
-          {flags && flags.length > 0 && (
-            <div style={{ marginTop: 16 }}>
-              <div style={{ fontFamily: T.fontMono, fontSize: 10, fontWeight: 700, color: T.textTertiary, textTransform: "uppercase", letterSpacing: "1px", marginBottom: 10 }}>Flags & Ambiguities</div>
-              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                {flags.map((flag, i) => {
-                  const words = flag.message.match(/"[^"]+"|'[^']+'|\b[A-Z][\w-]+\b|\b\d+\s*\w+/g) || [];
-                  const terms = words.map(w => w.replace(/^["']|["']$/g, "")).filter(w => w.length > 2);
-                  return <FlagRow key={i} flag={flag}
-                    onMouseEnter={() => hl(terms)}
-                    onMouseLeave={clearHl}
-                  />;
-                })}
+              {/* Line Items Table */}
+              <div style={{ background: T.surface, borderRadius: T.radiusLg, border: `1px solid ${T.border}`, overflow: "hidden" }}>
+                <div style={{ padding: "14px 20px", borderBottom: `1px solid ${T.borderLight}`, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                  <span style={{ fontFamily: T.fontMono, fontSize: 10, fontWeight: 700, color: T.textTertiary, textTransform: "uppercase", letterSpacing: "1px" }}>Extracted Line Items</span>
+                  <span style={{ fontFamily: T.fontMono, fontSize: 11, color: T.textTertiary }}>{line_items?.length || 0} items</span>
+                </div>
+                <div style={{ overflowX: "auto" }}>
+                  <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+                    <thead>
+                      <tr style={{ borderBottom: `2px solid ${T.border}` }}>
+                        {["#", "Description", "SKU", "Qty", "UoM", "Unit $", "Ext $", "Confidence"].map(h => (
+                          <th key={h} style={{ padding: "10px 14px", textAlign: "left", fontFamily: T.fontMono, fontSize: 10, fontWeight: 700, color: T.textTertiary, textTransform: "uppercase", letterSpacing: "0.5px", whiteSpace: "nowrap" }}>{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {line_items?.map((item, i) => (
+                        <tr key={i}
+                          className="flora-hover-row"
+                          onMouseEnter={() => hl([item.description, item.sku, item.notes].filter(Boolean))}
+                          onMouseLeave={clearHl}
+                          style={{ borderBottom: `1px solid ${T.borderLight}`, background: i % 2 === 1 ? "#FAFAF9" : "transparent", cursor: "default", transition: "background 0.1s ease" }}
+                        >
+                          <td style={{ padding: "12px 14px", color: T.textTertiary, fontFamily: T.fontMono, fontSize: 11 }}>{item.line}</td>
+                          <td style={{ padding: "12px 14px", fontWeight: 500, color: T.text, maxWidth: 260 }}>
+                            {item.description}
+                            {item.notes && <div style={{ fontSize: 12, color: T.textTertiary, marginTop: 3, fontStyle: "italic" }}>{item.notes}</div>}
+                          </td>
+                          <td style={{ padding: "12px 14px", fontFamily: T.fontMono, fontSize: 11, color: T.accent, fontWeight: 500 }}>{item.sku || "—"}</td>
+                          <td style={{ padding: "12px 14px", fontFamily: T.fontMono, fontWeight: 700, color: T.text }}>{item.quantity}</td>
+                          <td style={{ padding: "12px 14px", color: T.textSecondary, fontSize: 12 }}>{item.uom}</td>
+                          <td style={{ padding: "12px 14px", fontFamily: T.fontMono, fontSize: 12, color: T.textSecondary }}>{item.unit_price != null ? `$${item.unit_price.toFixed(2)}` : "—"}</td>
+                          <td style={{ padding: "12px 14px", fontFamily: T.fontMono, fontSize: 12, color: T.text, fontWeight: 500 }}>{item.ext_price != null ? `$${item.ext_price.toFixed(2)}` : "—"}</td>
+                          <td style={{ padding: "12px 14px" }}><ConfidencePill level={item.confidence} /></td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                {totals?.total != null && (
+                  <div style={{ borderTop: `1px solid ${T.border}`, padding: "14px 20px", display: "flex", justifyContent: "flex-end", gap: 28 }}>
+                    {totals.subtotal != null && <div style={{ textAlign: "right" }}><div style={{ fontFamily: T.fontMono, fontSize: 10, color: T.textTertiary, textTransform: "uppercase" }}>Subtotal</div><div style={{ fontFamily: T.fontMono, fontSize: 14, fontWeight: 600 }}>${totals.subtotal.toLocaleString("en-US", { minimumFractionDigits: 2 })}</div></div>}
+                    {totals.tax != null && <div style={{ textAlign: "right" }}><div style={{ fontFamily: T.fontMono, fontSize: 10, color: T.textTertiary, textTransform: "uppercase" }}>Tax</div><div style={{ fontFamily: T.fontMono, fontSize: 14, fontWeight: 600 }}>${totals.tax.toLocaleString("en-US", { minimumFractionDigits: 2 })}</div></div>}
+                    {totals.freight != null && <div style={{ textAlign: "right" }}><div style={{ fontFamily: T.fontMono, fontSize: 10, color: T.textTertiary, textTransform: "uppercase" }}>Freight</div><div style={{ fontFamily: T.fontMono, fontSize: 14, fontWeight: 600 }}>${totals.freight.toLocaleString("en-US", { minimumFractionDigits: 2 })}</div></div>}
+                    {totals.total != null && <div style={{ textAlign: "right" }}><div style={{ fontFamily: T.fontMono, fontSize: 10, color: T.accent, textTransform: "uppercase", fontWeight: 700 }}>Total</div><div style={{ fontFamily: T.fontMono, fontSize: 18, fontWeight: 800, color: T.accent }}>${totals.total.toLocaleString("en-US", { minimumFractionDigits: 2 })}</div></div>}
+                  </div>
+                )}
               </div>
-            </div>
-          )}
-        </StepCard>
 
-        <StepCard number="2" title="Match to Product Catalog" description={`Matched ${matchStats.exact + matchStats.fuzzy} of ${matchedItems.length} items to your catalog. ${matchStats.unmatched > 0 ? `${matchStats.unmatched} need manual review.` : "All items resolved."}`} status="active">
-          {/* SKU Matching Results Table */}
-          <div style={{ overflowX: "auto", margin: "0 -22px", padding: "0 22px" }}>
-            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
-              <thead>
-                <tr style={{ borderBottom: `2px solid ${T.border}` }}>
-                  {["Extracted Item", "Matched Catalog SKU", "Catalog Name", "Match", "Stock"].map(h => (
-                    <th key={h} style={{ padding: "8px 12px", textAlign: "left", fontFamily: T.fontMono, fontSize: 10, fontWeight: 700, color: T.textTertiary, textTransform: "uppercase", letterSpacing: "0.5px", whiteSpace: "nowrap" }}>{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {matchedItems.map((item, i) => {
-                  const m = item.match;
-                  const outOfStock = m?.catalogItem?.stock === 0;
-                  const lowStock = m?.catalogItem && item.quantity > m.catalogItem.stock && m.catalogItem.stock > 0;
-                  return (
-                    <tr key={i}
-                      className="flora-hover-row"
-                      onMouseEnter={() => hl([item.description, item.sku, item.notes].filter(Boolean))}
-                      onMouseLeave={clearHl}
-                      style={{ borderBottom: `1px solid ${T.borderLight}`, cursor: "default", transition: "background 0.1s ease" }}
-                    >
-                      <td style={{ padding: "10px 12px", maxWidth: 200 }}>
-                        <div style={{ fontWeight: 500, color: T.text, fontSize: 13 }}>{item.description}</div>
-                        {item.sku && <div style={{ fontFamily: T.fontMono, fontSize: 11, color: T.textTertiary, marginTop: 2 }}>{item.sku}</div>}
-                      </td>
-                      <td style={{ padding: "10px 12px" }}>
-                        {m ? <span style={{ fontFamily: T.fontMono, fontSize: 12, fontWeight: 600, color: T.accent }}>{m.catalogItem.sku}</span> : <span style={{ color: T.textTertiary, fontSize: 12 }}>—</span>}
-                      </td>
-                      <td style={{ padding: "10px 12px", fontSize: 13, color: T.textSecondary, maxWidth: 220 }}>
-                        {m ? m.catalogItem.name : <span style={{ fontStyle: "italic", color: T.textTertiary }}>No catalog match</span>}
-                      </td>
-                      <td style={{ padding: "10px 12px" }}>
-                        <MatchBadge type={m ? m.matchType : "none"} />
-                      </td>
-                      <td style={{ padding: "10px 12px" }}>
-                        {m ? (
-                          <span style={{
-                            fontFamily: T.fontMono, fontSize: 12, fontWeight: 600,
-                            color: outOfStock ? T.red : lowStock ? T.amber : T.green,
-                          }}>
-                            {outOfStock ? "OUT OF STOCK" : `${m.catalogItem.stock.toLocaleString()} ${m.catalogItem.uom}`}
-                            {lowStock && " ⚠️"}
-                          </span>
-                        ) : <span style={{ color: T.textTertiary }}>—</span>}
-                      </td>
+              {/* Flags */}
+              {flags && flags.length > 0 && (
+                <div style={{ marginTop: 16 }}>
+                  <div style={{ fontFamily: T.fontMono, fontSize: 10, fontWeight: 700, color: T.textTertiary, textTransform: "uppercase", letterSpacing: "1px", marginBottom: 10 }}>Flags & Ambiguities</div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                    {flags.map((flag, i) => {
+                      const words = flag.message.match(/"[^"]+"|'[^']+'|\b[A-Z][\w-]+\b|\b\d+\s*\w+/g) || [];
+                      const terms = words.map(w => w.replace(/^["']|["']$/g, "")).filter(w => w.length > 2);
+                      return <FlagRow key={i} flag={flag}
+                        onMouseEnter={() => hl(terms)}
+                        onMouseLeave={clearHl}
+                      />;
+                    })}
+                  </div>
+                </div>
+              )}
+            </StepCard>
+
+            <StepCard number="2" title="Match to Product Catalog" description={`Matched ${matchStats.exact + matchStats.fuzzy} of ${matchedItems.length} items to your catalog. ${matchStats.unmatched > 0 ? `${matchStats.unmatched} need manual review.` : "All items resolved."}`} status="active">
+              {/* SKU Matching Results Table */}
+              <div style={{ overflowX: "auto", margin: "0 -22px", padding: "0 22px" }}>
+                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+                  <thead>
+                    <tr style={{ borderBottom: `2px solid ${T.border}` }}>
+                      {["Extracted Item", "Matched Catalog SKU", "Catalog Name", "Match", "Stock"].map(h => (
+                        <th key={h} style={{ padding: "8px 12px", textAlign: "left", fontFamily: T.fontMono, fontSize: 10, fontWeight: 700, color: T.textTertiary, textTransform: "uppercase", letterSpacing: "0.5px", whiteSpace: "nowrap" }}>{h}</th>
+                      ))}
                     </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+                  </thead>
+                  <tbody>
+                    {matchedItems.map((item, i) => {
+                      const m = item.match;
+                      const outOfStock = m?.catalogItem?.stock === 0;
+                      const lowStock = m?.catalogItem && item.quantity > m.catalogItem.stock && m.catalogItem.stock > 0;
+                      return (
+                        <tr key={i}
+                          className="flora-hover-row"
+                          onMouseEnter={() => hl([item.description, item.sku, item.notes].filter(Boolean))}
+                          onMouseLeave={clearHl}
+                          style={{ borderBottom: `1px solid ${T.borderLight}`, cursor: "default", transition: "background 0.1s ease" }}
+                        >
+                          <td style={{ padding: "10px 12px", maxWidth: 200 }}>
+                            <div style={{ fontWeight: 500, color: T.text, fontSize: 13 }}>{item.description}</div>
+                            {item.sku && <div style={{ fontFamily: T.fontMono, fontSize: 11, color: T.textTertiary, marginTop: 2 }}>{item.sku}</div>}
+                          </td>
+                          <td style={{ padding: "10px 12px" }}>
+                            {m ? <span style={{ fontFamily: T.fontMono, fontSize: 12, fontWeight: 600, color: T.accent }}>{m.catalogItem.sku}</span> : <span style={{ color: T.textTertiary, fontSize: 12 }}>—</span>}
+                          </td>
+                          <td style={{ padding: "10px 12px", fontSize: 13, color: T.textSecondary, maxWidth: 220 }}>
+                            {m ? m.catalogItem.name : <span style={{ fontStyle: "italic", color: T.textTertiary }}>No catalog match</span>}
+                          </td>
+                          <td style={{ padding: "10px 12px" }}>
+                            <MatchBadge type={m ? m.matchType : "none"} />
+                          </td>
+                          <td style={{ padding: "10px 12px" }}>
+                            {m ? (
+                              <span style={{
+                                fontFamily: T.fontMono, fontSize: 12, fontWeight: 600,
+                                color: outOfStock ? T.red : lowStock ? T.amber : T.green,
+                              }}>
+                                {outOfStock ? "OUT OF STOCK" : `${m.catalogItem.stock.toLocaleString()} ${m.catalogItem.uom}`}
+                                {lowStock && " ⚠️"}
+                              </span>
+                            ) : <span style={{ color: T.textTertiary }}>—</span>}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+              {matchStats.stockWarnings > 0 && (
+                <div style={{ marginTop: 12, padding: "10px 14px", borderRadius: T.radiusSm, background: T.amberLight, border: `1px solid ${T.amberBorder}`, fontSize: 12, color: T.amber, fontWeight: 500 }}>
+                  ⚠️ {matchStats.stockWarnings} item(s) have stock availability concerns — Flora would flag these before ERP submission.
+                </div>
+              )}
+            </StepCard>
+
+            <StepCard number="3" title="Flag for Human Review" description={`${valItems.length} field(s) need human confirmation before this order can be submitted. Flora never guesses — it asks.`} status="premium" badge="Premium">
+              <ValidationPanel items={valItems} onHighlight={onHighlight} />
+            </StepCard>
+
           </div>
-          {matchStats.stockWarnings > 0 && (
-            <div style={{ marginTop: 12, padding: "10px 14px", borderRadius: T.radiusSm, background: T.amberLight, border: `1px solid ${T.amberBorder}`, fontSize: 12, color: T.amber, fontWeight: 500 }}>
-              ⚠️ {matchStats.stockWarnings} item(s) have stock availability concerns — Flora would flag these before ERP submission.
-            </div>
-          )}
-        </StepCard>
-
-        <StepCard number="3" title="Validate & Confirm Data" description={`${valItems.length} field(s) need human confirmation before this order can be submitted. Flora never guesses — it asks.`} status="premium" badge="Premium">
-          <ValidationPanel items={valItems} onHighlight={onHighlight} />
-        </StepCard>
-
-        <StepCard number="4" title="Draft Sales Order in ERP" description={draftOrder ? "Editable draft pre-populated from extracted data and catalog matches. Review and adjust before submission." : "Auto-create a sales order in NetSuite, SAP, Dynamics, or QuickBooks with matched SKUs, quantities, and pricing."} status={draftOrder ? "active" : "locked"}>
-          {draftOrder && <DraftSalesOrder draftOrder={draftOrder} setDraftOrder={setDraftOrder} catalog={DEMO_CATALOG} />}
-        </StepCard>
-        <StepCard number="5" title="Confirm & Submit" description="One-click approval or straight-through processing for high-confidence orders from trusted customers." status="locked" />
+        )}
       </div>
 
       {/* CTA */}
