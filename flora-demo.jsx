@@ -463,6 +463,34 @@ const CATALOG_BY_CATEGORY = (() => {
   return grouped;
 })();
 
+// Returns catalog items ranked by similarity to an extracted line item, highest score first
+function rankCatalogForItem(extractedItem) {
+  if (!extractedItem) return [];
+  const desc = (extractedItem.description || "").toLowerCase();
+  const sku = (extractedItem.sku || "").toLowerCase();
+  const notes = (extractedItem.notes || "").toLowerCase();
+  const combined = `${desc} ${sku} ${notes}`;
+
+  return DEMO_CATALOG.map(product => {
+    let score = 0;
+    if (sku && product.sku.toLowerCase() === sku) {
+      score = 100;
+    } else if (sku && product.sku.toLowerCase().includes(sku.replace(/[^a-z0-9]/g, ""))) {
+      score = 85;
+    } else if (combined.includes(product.sku.toLowerCase())) {
+      score = 90;
+    } else {
+      const productWords = product.name.toLowerCase().split(/[\s\-\/]+/).filter(w => w.length > 2);
+      const matchedWords = productWords.filter(w => combined.includes(w));
+      const ratio = productWords.length > 0 ? matchedWords.length / productWords.length : 0;
+      score = Math.round(ratio * 75);
+    }
+    return { ...product, _score: score };
+  })
+  .filter(p => p._score >= 15)
+  .sort((a, b) => b._score - a._score);
+}
+
 const draftInputStyle = {
   width: "100%", padding: "7px 10px", borderRadius: 6, border: `1px solid ${T.border}`,
   fontSize: 13, fontFamily: T.font, color: T.text, background: "#fff",
@@ -490,6 +518,14 @@ function DraftSalesOrder({ draftOrder, setDraftOrder, catalog, onHighlight, extr
       }),
     }));
   };
+
+  // Ranked catalog suggestions per line item (only semantically similar SKUs)
+  const suggestionsPerLine = useMemo(() => {
+    return draftOrder.lineItems.map((_, i) => {
+      const origItem = extractionData?.line_items?.[i];
+      return rankCatalogForItem(origItem);
+    });
+  }, [extractionData?.line_items]);
 
   // Highlight helpers
   const hl = (terms) => onHighlight?.(terms);
@@ -561,7 +597,7 @@ function DraftSalesOrder({ draftOrder, setDraftOrder, catalog, onHighlight, extr
             <input style={flagStyle(draftInputStyle, "customer")} value={draftOrder.header.customer} onChange={e => updateHeader("customer", e.target.value)} />
             <FieldFlag fieldKey="customer" />
           </div>
-          <div>
+          <div onMouseEnter={() => { const d = extractionData?.order_date; if (!d) return clearHl(); const terms = [d]; const m = d.match(/^(\d{4})-(\d{2})-(\d{2})$/); if (m) { const [, yyyy, mm, dd] = m; terms.push(`${mm}/${dd}/${yyyy}`, `${parseInt(mm)}/${parseInt(dd)}/${yyyy}`, `${mm}-${dd}-${yyyy}`); } hl(terms.filter(Boolean)); }} onMouseLeave={clearHl}>
             <label style={draftLabelStyle}>Date</label>
             <input type="date" style={draftInputStyle} value={draftOrder.header.date} onChange={e => updateHeader("date", e.target.value)} />
           </div>
@@ -641,11 +677,26 @@ function DraftSalesOrder({ draftOrder, setDraftOrder, catalog, onHighlight, extr
                     <td style={{ padding: "8px 6px", minWidth: 200 }} onMouseEnter={() => hl([origItem?.sku, li.catalogSku, origItem?.description].filter(Boolean))} onMouseLeave={clearHl}>
                       <select style={{ ...draftSelectStyle, fontSize: 11, padding: "5px 6px" }} value={li.catalogSku} onChange={e => handleSkuChange(li.id, e.target.value)}>
                         <option value="">-- Select Item --</option>
-                        {Object.entries(CATALOG_BY_CATEGORY).map(([cat, items]) => (
-                          <optgroup key={cat} label={cat}>
-                            {items.map(c => <option key={c.sku} value={c.sku}>{c.sku} — {c.name}</option>)}
-                          </optgroup>
-                        ))}
+                        {(() => {
+                          const suggestions = suggestionsPerLine[i] || [];
+                          if (suggestions.length > 0) {
+                            // Ensure the currently selected SKU is in the list even if it wasn't a top match
+                            const skus = new Set(suggestions.map(s => s.sku));
+                            const extra = li.catalogSku && !skus.has(li.catalogSku) ? catalog.find(c => c.sku === li.catalogSku) : null;
+                            return (
+                              <>
+                                {extra && <option key={extra.sku} value={extra.sku}>{extra.sku} — {extra.name}</option>}
+                                {suggestions.map(c => <option key={c.sku} value={c.sku}>{c.sku} — {c.name}</option>)}
+                              </>
+                            );
+                          }
+                          // Fallback: no extraction data — show full catalog
+                          return Object.entries(CATALOG_BY_CATEGORY).map(([cat, items]) => (
+                            <optgroup key={cat} label={cat}>
+                              {items.map(c => <option key={c.sku} value={c.sku}>{c.sku} — {c.name}</option>)}
+                            </optgroup>
+                          ));
+                        })()}
                       </select>
                     </td>
                     <td style={{ padding: "8px 6px", minWidth: 160 }} onMouseEnter={() => hl([origItem?.description, li.description].filter(Boolean))} onMouseLeave={clearHl}>
@@ -759,9 +810,13 @@ function HighlightedRawInput({ text, terms, scrollRef }) {
   }
 
   // Build case-insensitive regex from terms, escaping special chars
+  // Allow short numeric terms (quantities, prices) but require word boundaries to avoid false matches
   const escaped = terms
-    .filter(t => t && t.length > 2)
-    .map(t => t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"))
+    .filter(t => t && (t.length > 2 || /^\d/.test(t)))
+    .map(t => {
+      const esc = t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      return t.length <= 2 ? `\\b${esc}\\b` : esc;
+    })
     .sort((a, b) => b.length - a.length); // longest first to avoid partial matches
 
   if (escaped.length === 0) {
@@ -859,8 +914,12 @@ function ResultsView({ data, onHighlight }) {
       // Use extracted order_date, falling back to today
       const orderDate = toISO(order_date) || today;
 
-      // Best-effort parse of requested date to ISO format, falling back to assumed_value
-      const reqDate = toISO(delivery?.requested_date) || toISO(assumed("requested_date"));
+      // Best-effort parse of requested date to ISO format
+      // If a validation item exists with an assumed_value, prefer it (the raw date may parse
+      // to a nonsensical year, e.g. "5/3" → 2001-05-03, while assumed_value is "2025-05-03")
+      const assumedDate = toISO(assumed("requested_date"));
+      const rawDate = toISO(delivery?.requested_date);
+      const reqDate = assumedDate || rawDate;
 
       setDraftOrder({
         header: {
@@ -906,7 +965,7 @@ function ResultsView({ data, onHighlight }) {
           setDraftOrder={setDraftOrder}
           catalog={DEMO_CATALOG}
           onHighlight={onHighlight}
-          extractionData={{ customer, po_reference, delivery, line_items }}
+          extractionData={{ customer, po_reference, order_date, delivery, line_items }}
           validationItems={valItems}
         />
       )}
@@ -1124,7 +1183,7 @@ function ResultsView({ data, onHighlight }) {
 
 export default function FloraDemo() {
   const [activeTab, setActiveTab] = useState("samples");
-  const [selectedSample, setSelectedSample] = useState(null);
+  const [hoveredSample, setHoveredSample] = useState(null);
   const [pasteText, setPasteText] = useState("");
   const [uploadedText, setUploadedText] = useState("");
   const [uploadedFileName, setUploadedFileName] = useState("");
@@ -1388,11 +1447,11 @@ export default function FloraDemo() {
                 LIVE DEMO
               </div>
               <h1 style={{ fontSize: "clamp(28px, 4.5vw, 44px)", fontWeight: 700, lineHeight: 1.15, letterSpacing: "-0.8px", marginBottom: 14, color: T.text }}>
-                Messy order in.<br />
-                <span style={{ color: T.accent }}>Structured data out.</span>
+                From inbox to ERP<br />
+                <span style={{ color: T.accent }}>in one click.</span>
               </h1>
               <p style={{ fontSize: 16, color: T.textSecondary, maxWidth: 520, margin: "0 auto", lineHeight: 1.65 }}>
-                See AI extract clean, catalog-matched order data from any format — fax, email, spreadsheet, or a quick chat message.
+                Flora AI reads every order from every channel — fax, email, spreadsheet, or chat — matches it to your catalog, and delivers a verified sales order ready to book. No re-keying. No delays.
               </p>
             </div>
 
@@ -1421,59 +1480,49 @@ export default function FloraDemo() {
 
               {/* Samples */}
               {activeTab === "samples" && (
-                <div>
-                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(165px, 1fr))", gap: 10, marginBottom: 20 }}>
-                    {SAMPLE_ORDERS.map(s => (
-                      <button key={s.id} onClick={() => { setSelectedSample(s.id); setResult(null); setError(null); }} style={{
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(165px, 1fr))", gap: 10, marginBottom: 20 }}>
+                  {SAMPLE_ORDERS.map(s => (
+                    <button key={s.id}
+                      onClick={() => extractOrder(s.content, s.label, s.image)}
+                      onMouseEnter={() => setHoveredSample(s.id)}
+                      onMouseLeave={() => setHoveredSample(null)}
+                      style={{
                         ...btnBase, padding: 0, borderRadius: T.radius, textAlign: "left",
-                        border: selectedSample === s.id ? `2px solid ${T.accent}` : `1px solid ${T.border}`,
-                        background: selectedSample === s.id ? T.accentLight : T.surface,
+                        border: `1px solid ${hoveredSample === s.id ? T.accent : T.border}`,
+                        background: T.surface,
                         display: "flex", flexDirection: "column", overflow: "hidden",
+                        position: "relative", transition: "border-color 0.15s ease, box-shadow 0.15s ease",
+                        boxShadow: hoveredSample === s.id ? `0 2px 8px ${T.accent}20` : "none",
                       }}>
-                        {s.image ? (
-                          <div style={{ width: "100%", height: 100, overflow: "hidden", borderBottom: `1px solid ${T.borderLight}`, background: "#F5F5F4" }}>
-                            <img src={s.image} alt={s.label} style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "top", opacity: 0.85 }} />
-                          </div>
-                        ) : (
-                          <div style={{ padding: "14px 14px 0" }}>
-                            <span style={{ fontSize: 22 }}>{s.icon}</span>
-                          </div>
-                        )}
-                        <div style={{ padding: s.image ? "10px 14px 14px" : "8px 14px 14px", display: "flex", flexDirection: "column", gap: 4 }}>
-                          <span style={{ fontWeight: 700, fontSize: 13, color: selectedSample === s.id ? T.accent : T.text }}>{s.label}</span>
-                          <span style={{ fontSize: 12, color: T.textTertiary, lineHeight: 1.4 }}>{s.description}</span>
+                      {s.image ? (
+                        <div style={{ width: "100%", height: 100, overflow: "hidden", borderBottom: `1px solid ${T.borderLight}`, background: "#F5F5F4" }}>
+                          <img src={s.image} alt={s.label} style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "top", opacity: 0.85 }} />
                         </div>
-                      </button>
-                    ))}
-                  </div>
-                  {selectedSample && (() => {
-                    const selectedOrder = SAMPLE_ORDERS.find(s => s.id === selectedSample);
-                    return (
-                    <div style={{ animation: "offade 0.2s ease" }}>
-                      <div style={{ background: T.surface, borderRadius: T.radius, border: `1px solid ${T.border}`, marginBottom: 14, maxHeight: 340, overflow: "auto" }}>
-                        <div style={{ padding: "10px 16px", borderBottom: `1px solid ${T.borderLight}`, position: "sticky", top: 0, background: T.surface, zIndex: 1 }}>
-                          <span style={{ fontFamily: T.fontMono, fontSize: 10, fontWeight: 700, color: T.textTertiary, textTransform: "uppercase", letterSpacing: "0.5px" }}>
-                            {selectedOrder?.image ? "Document Preview" : "Raw Input Preview"}
+                      ) : (
+                        <div style={{ padding: "14px 14px 0" }}>
+                          <span style={{ fontSize: 22 }}>{s.icon}</span>
+                        </div>
+                      )}
+                      <div style={{ padding: s.image ? "10px 14px 14px" : "8px 14px 14px", display: "flex", flexDirection: "column", gap: 4 }}>
+                        <span style={{ fontWeight: 700, fontSize: 13, color: T.text }}>{s.label}</span>
+                        <span style={{ fontSize: 12, color: T.textTertiary, lineHeight: 1.4 }}>{s.description}</span>
+                      </div>
+                      {/* Hover overlay */}
+                      {hoveredSample === s.id && (
+                        <div style={{
+                          position: "absolute", inset: 0, borderRadius: T.radius,
+                          background: "rgba(30, 58, 138, 0.75)",
+                          display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+                          gap: 8, padding: 16, animation: "offade 0.15s ease",
+                        }}>
+                          <span style={{ fontSize: 24, lineHeight: 1 }}>▶</span>
+                          <span style={{ color: "#fff", fontSize: 12, fontWeight: 600, textAlign: "center", lineHeight: 1.4 }}>
+                            See AI prepare the<br />ERP draft
                           </span>
                         </div>
-                        {selectedOrder?.image ? (
-                          <div style={{ padding: 8, background: "#F8F8F6" }}>
-                            <img src={selectedOrder.image} alt={selectedOrder.label} style={{ width: "100%", borderRadius: 4, display: "block" }} />
-                          </div>
-                        ) : (
-                          <pre style={{ padding: 16, fontFamily: T.fontMono, fontSize: 12, color: T.textSecondary, lineHeight: 1.65, whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
-                            {selectedOrder?.content}
-                          </pre>
-                        )}
-                      </div>
-                      <button onClick={() => { if (selectedOrder) extractOrder(selectedOrder.content, selectedOrder.label, selectedOrder.image); }}
-                        style={{ ...btnBase, width: "100%", padding: 16, borderRadius: T.radius, background: T.accent, color: "#fff", fontWeight: 700, fontSize: 14, boxShadow: `0 1px 3px ${T.accent}30` }}
-                        onMouseEnter={e => { e.target.style.background = T.accentDark; }}
-                        onMouseLeave={e => { e.target.style.background = T.accent; }}
-                      >Extract & Match to Catalog →</button>
-                    </div>
-                    );
-                  })()}
+                      )}
+                    </button>
+                  ))}
                 </div>
               )}
 
