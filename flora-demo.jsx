@@ -51,7 +51,7 @@ const DEMO_CATALOG = [
   { sku: "FF-BEV-SMTH-BRY", name: "Mixed Berry Smoothie 500ml", category: "Beverages", price: 4.20, uom: "BTL", stock: 0 },
   // Dairy & Produce (Fax sample)
   { sku: "YOG-OMB-6", name: "Organic Mixed Berry Yogurt Cups", category: "Dairy", price: 4.20, uom: "CASE", stock: 1800 },
-  { sku: "TURK-GR1", name: "Free-Range Ground Turkey 1lb", category: "Meat", price: 6.90, uom: "CASE", stock: 540 },
+  { sku: "TURK-GR1", name: "Free-Range Ground Turkey 1lb", category: "Meat", price: 6.90, uom: "CASE", stock: 0 },
   { sku: "TURK-GR3", name: "Free-Range Ground Turkey 3lb", category: "Meat", price: 14.50, uom: "CASE", stock: 280 },
   { sku: "SALSA-FRS-H", name: "Fresh Garden Salsa", category: "Condiments", price: 3.80, uom: "CASE", stock: 920 },
   { sku: "FF-FRZ-BROC-16", name: "Frozen Broccoli Florets 16oz", category: "Frozen", price: 3.40, uom: "BAG", stock: 1200 },
@@ -68,6 +68,46 @@ const DEMO_CATALOG = [
   { sku: "FF-DIP-SPIN-400", name: "Spinach & Feta Dip 400g", category: "Dips", price: 4.80, uom: "TUB", stock: 380 },
   { sku: "FF-CHZ-SWIS-2K5", name: "Sliced Swiss Cheese 2.5kg bulk", category: "Cheese", price: 18.90, uom: "PK", stock: 120 },
 ];
+
+// ─── Order History (mock) ────────────────────────────────────────────────────
+
+const ORDER_HISTORY = {
+  "Sunnyside Market": {
+    customerSince: "2024-03-15",
+    totalOrders: 8,
+    lastOrder: {
+      date: "2025-10-02",
+      poRef: "SSM-10-2025-002",
+      items: [
+        { sku: "FF-SNK-CHIP-SEA", description: "Sea Salt Kettle Chips 200g", quantity: 40, uom: "BAG" },
+        { sku: "FF-SNK-CHIP-BBQ", description: "BBQ Kettle Chips 200g", quantity: 36, uom: "BAG" },
+        { sku: "FF-PRE-HUM-RST", description: "Roasted Red Pepper Hummus 300g", quantity: 48, uom: "TUB" },
+        { sku: "FF-PRE-HUM-CLS", description: "Classic Hummus 300g", quantity: 80, uom: "TUB" },
+        { sku: "FF-CON-MUST-350", description: "Whole Grain Mustard 350ml", quantity: 24, uom: "JAR" },
+        { sku: "FF-BAK-CROS-6PK", description: "Butter Croissants 6-pack", quantity: 20, uom: "PK" },
+        { sku: "FF-BAK-TORT-12", description: "Flour Tortillas 12-inch (12ct)", quantity: 30, uom: "PK" },
+        { sku: "FF-BEV-SMTH-MNG", description: "Mango Smoothie 500ml", quantity: 100, uom: "BTL" },
+        { sku: "FF-BEV-SMTH-BRY", description: "Mixed Berry Smoothie 500ml", quantity: 100, uom: "BTL" },
+      ],
+    },
+  },
+};
+
+// ─── Customer Item Code Cross-Reference ──────────────────────────────────────
+
+const CUSTOMER_ITEM_XREF = {
+  "GreenHaven Market": {
+    "GH-YOG-06": "YOG-OMB-6",
+    "GH-TKY-01": "TURK-GR1",
+    "GH-TKY-03": "TURK-GR3",
+    "GH-SLSA-F": "SALSA-FRS-H",
+    "GH-FRZ-BROC": "FF-FRZ-BROC-16",
+    "GH-JAL-SL": "FF-CON-JALP-SLC",
+    "GH-JAL-DC": "FF-CON-JALP-DIC",
+  },
+};
+
+// ─── SKU Matching ────────────────────────────────────────────────────────────
 
 function matchSkuToCatalog(extractedItem) {
   const desc = (extractedItem.description || "").toLowerCase();
@@ -132,7 +172,7 @@ const SAMPLE_ORDERS = [
     id: "fax", label: "Blurry Fax PO", icon: "📠",
     description: "Handwritten PO with smudged quantities and corrections",
     image: "/samples/faxorder.png",
-    content: `PURCHASE ORDER — FAX TRANSMISSION\nFrom: GreenHaven Market\nAttn: Sales Department\nDate: 04/26/2025\nPO#: GM-2025-1341\n\nPlease produce and ship the following to our warehouse at 2880 Logistics Rd, Dock 12, Dallas TX 75237:\n\n  250 cases   Organic Mixed Berry Yogurt Cups     (your product # YOG-OMB-6)\n  160 cases   Free-Range Ground Turkey 1 lb packs  (your SKU: TURK-GR1, ok to sub SKU TURK-GR3 if necessary)\n  400 cases   Fresh Garden Salsa                   (your item # SALSA-FRS-H) — No cilantro in this batch please.\n  360 units   Frozen Broccoli Florets 16 oz bags   (please pack in the new 24-unit cases)\n  ??? cases   Sliced Jalapeño Peppers              (same diced jalapeños we ordered last month—Rick knows the size and pack)\n\nRUSH — need by 5/3 if possible. Call me at 972-555-0138 if any issues.\n\nColleen Rogers\n\n(handwritten note: "We're running low. Lets bump the turkey order to 160 cases. Thanks!")`,
+    content: `PURCHASE ORDER — FAX TRANSMISSION\nFrom: GreenHaven Market\nAttn: Sales Department\nDate: 04/26/2025\nPO#: GM-2025-1341\n\nPlease produce and ship the following to our warehouse at 2880 Logistics Rd, Dock 12, Dallas TX 75237:\n\n  250 cases   Organic Mixed Berry Yogurt Cups     (our item # GH-YOG-06)\n  160 cases   Free-Range Ground Turkey 1 lb packs  (our code: GH-TKY-01, ok to sub our code GH-TKY-03 if necessary)\n  400 cases   Fresh Garden Salsa                   (our item # GH-SLSA-F) — No cilantro in this batch please.\n  360 units   Frozen Broccoli Florets 16 oz bags   (please pack in the new 24-unit cases)\n  ??? cases   Sliced Jalapeño Peppers              (same diced jalapeños we ordered last month—Rick knows the size and pack)\n\nRUSH — need by 5/3 if possible. Call me at 972-555-0138 if any issues.\n\nColleen Rogers\n\n(handwritten note: "We're running low. Lets bump the turkey order to 160 cases. Thanks!")`,
   },
   {
     id: "email", label: "Buried Email Chain", icon: "✉️",
@@ -170,6 +210,8 @@ CRITICAL EXTRACTION RULES:
 - Skip items that were explicitly cancelled or put on hold
 - Flag any ambiguities or items that need clarification
 - If pricing is present, include it. If not, omit price fields.
+- If the customer explicitly authorizes a substitution (e.g. "ok to sub X if necessary"), capture it in the substitution field of the relevant line item. Only capture substitutions the customer explicitly mentions.
+- If the order references customer-specific item codes or part numbers (e.g. "our item # GH-YOG-06", "our code: ABC-123"), extract them as the sku field. These may be customer codes rather than internal SKUs — downstream cross-referencing will resolve them.
 
 Additionally, generate a "validation_items" array for any extracted field that is incomplete, ambiguous, or would need human confirmation before submitting to an ERP system. For each item, ALWAYS provide your best-effort assumption in "assumed_value" — what you would fill in if forced to guess. The human reviewer will verify or correct your assumption. Common cases include:
 - Dates without a year (e.g. "Dec 5th" → assume the next upcoming Dec 5th, e.g. "2026-12-05")
@@ -204,7 +246,8 @@ Respond with ONLY valid JSON in this exact structure, no markdown fences:
       "unit_price": number or null,
       "ext_price": number or null,
       "notes": "string or null",
-      "confidence": "high" | "medium" | "low"
+      "confidence": "high" | "medium" | "low",
+      "substitution": { "original_sku": "string or null", "substitute_sku": "string or null", "condition": "string or null — e.g. 'if out of stock', 'if unavailable'" } or null
     }
   ],
   "flags": [
@@ -228,7 +271,8 @@ Respond with ONLY valid JSON in this exact structure, no markdown fences:
     "tax": number or null,
     "freight": number or null,
     "total": number or null
-  }
+  },
+  "memo": "string — Summarize ALL notes, special instructions, flags, and action items from the order into a concise bulleted action list for the fulfillment team. Combine delivery notes, line item notes, corrections, and ambiguities into clear, de-duplicated action items. Use '• ' bullet prefix per line. Keep it short and actionable — e.g. '• Confirm new recipe for roasted red pepper hummus (line 3)' not raw dump of notes. Omit if no notes exist."
 }
 
 ORDER TEXT:
@@ -262,6 +306,9 @@ const T = {
   orangeBorder: "#FDBA74",
   purple: "#7C3AED",
   purpleLight: "#F5F3FF",
+  teal: "#0D9488",
+  tealLight: "#F0FDFA",
+  tealBorder: "#99F6E4",
   radius: 10,
   radiusSm: 6,
   radiusLg: 14,
@@ -290,6 +337,8 @@ function MatchBadge({ type }) {
   const map = {
     exact: { bg: T.greenLight, color: T.green, border: T.greenBorder, icon: "✓", label: "Exact Match" },
     sku_partial: { bg: T.accentLight, color: T.accent, border: "#BFDBFE", icon: "≈", label: "SKU Match" },
+    xref: { bg: T.purpleLight, color: T.purple, border: "#C4B5FD", icon: "🔗", label: "Cross-Referenced" },
+    substitution: { bg: T.accentLight, color: T.accent, border: "#BFDBFE", icon: "⇄", label: "Substituted" },
     fuzzy: { bg: T.amberLight, color: T.amber, border: T.amberBorder, icon: "~", label: "Fuzzy Match" },
     none: { bg: T.redLight, color: T.red, border: T.redBorder, icon: "?", label: "No Match" },
   };
@@ -491,6 +540,97 @@ function rankCatalogForItem(extractedItem) {
   .sort((a, b) => b._score - a._score);
 }
 
+// ─── Cross-Reference Customer Codes ──────────────────────────────────────────
+
+function crossReferenceCustomerCodes(extractedItems, customerName) {
+  if (!customerName || !extractedItems) return { items: extractedItems || [], mappings: [] };
+  const normalizedName = customerName.trim().toLowerCase();
+  const xrefEntry = Object.entries(CUSTOMER_ITEM_XREF).find(([name]) => name.toLowerCase() === normalizedName);
+  if (!xrefEntry) return { items: extractedItems, mappings: [] };
+  const [, xrefMap] = xrefEntry;
+  const mappings = [];
+
+  const resolvedItems = extractedItems.map(item => {
+    const extractedSku = (item.sku || "").trim();
+    if (!extractedSku) return item;
+    const match = Object.entries(xrefMap).find(([c]) => c.toLowerCase() === extractedSku.toLowerCase());
+    if (!match) return item;
+    const [customerCode, ourSku] = match;
+    mappings.push({ customerCode, internalSku: ourSku, line: item.line });
+
+    // Also resolve substitution SKUs if present
+    let resolvedSub = item.substitution;
+    if (resolvedSub) {
+      const subOrig = Object.entries(xrefMap).find(([c]) => c.toLowerCase() === (resolvedSub.original_sku || "").toLowerCase());
+      const subAlt = Object.entries(xrefMap).find(([c]) => c.toLowerCase() === (resolvedSub.substitute_sku || "").toLowerCase());
+      resolvedSub = { ...resolvedSub, original_sku: subOrig ? subOrig[1] : resolvedSub.original_sku, substitute_sku: subAlt ? subAlt[1] : resolvedSub.substitute_sku };
+    }
+    return { ...item, sku: ourSku, _customerCode: customerCode, substitution: resolvedSub };
+  });
+  return { items: resolvedItems, mappings };
+}
+
+// ─── Substitution Logic ──────────────────────────────────────────────────────
+
+function applySubstitutions(matchedItems) {
+  return matchedItems.map(item => {
+    const sub = item.substitution;
+    if (!sub || !sub.substitute_sku) return item;
+    const matchedProduct = item.match?.catalogItem;
+    if (!matchedProduct || matchedProduct.stock > 0) return item; // only sub if OOS
+    const subProduct = DEMO_CATALOG.find(p => p.sku.toLowerCase() === sub.substitute_sku.toLowerCase());
+    if (!subProduct || subProduct.stock === 0) return item;
+    return {
+      ...item,
+      match: { catalogItem: subProduct, score: 100, matchType: "substitution", confidence: "high" },
+      _substitution: {
+        originalSku: sub.original_sku || matchedProduct.sku,
+        originalName: matchedProduct.name,
+        originalStock: matchedProduct.stock,
+        substituteSku: subProduct.sku,
+        substituteName: subProduct.name,
+        substituteStock: subProduct.stock,
+        condition: sub.condition,
+        customerAuthorized: true,
+      },
+    };
+  });
+}
+
+// ─── Repeat Order Detection ──────────────────────────────────────────────────
+
+function detectRepeatOrder(customerName, currentItems) {
+  if (!customerName) return null;
+  const normalizedName = customerName.trim().toLowerCase();
+  const historyEntry = Object.entries(ORDER_HISTORY).find(([name]) => name.toLowerCase() === normalizedName);
+  if (!historyEntry) return null;
+  const [matchedName, history] = historyEntry;
+  const prevItems = history.lastOrder.items;
+  const diff = [];
+
+  for (const curr of currentItems) {
+    const catalogSku = curr.match?.catalogItem?.sku;
+    if (!catalogSku) continue;
+    const prev = prevItems.find(p => p.sku === catalogSku);
+    if (prev) {
+      if (curr.quantity !== prev.quantity) {
+        diff.push({ type: curr.quantity > prev.quantity ? "qty_increased" : "qty_decreased", sku: catalogSku, description: curr.match?.catalogItem?.name || curr.description, prevQty: prev.quantity, currentQty: curr.quantity });
+      } else {
+        diff.push({ type: "unchanged", sku: catalogSku, description: curr.match?.catalogItem?.name || curr.description, quantity: curr.quantity });
+      }
+    } else {
+      diff.push({ type: "new_item", sku: catalogSku, description: curr.match?.catalogItem?.name || curr.description, quantity: curr.quantity });
+    }
+  }
+  for (const prev of prevItems) {
+    if (!currentItems.some(c => c.match?.catalogItem?.sku === prev.sku)) {
+      diff.push({ type: "removed", sku: prev.sku, description: prev.description, prevQty: prev.quantity });
+    }
+  }
+
+  return { customerName: matchedName, customerSince: history.customerSince, totalOrders: history.totalOrders, lastOrderDate: history.lastOrder.date, lastOrderPO: history.lastOrder.poRef, diff };
+}
+
 const draftInputStyle = {
   width: "100%", padding: "7px 10px", borderRadius: 6, border: `1px solid ${T.border}`,
   fontSize: 13, fontFamily: T.font, color: T.text, background: "#fff",
@@ -502,7 +642,7 @@ const draftLabelStyle = {
   textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 5, display: "block",
 };
 
-function DraftSalesOrder({ draftOrder, setDraftOrder, catalog, onHighlight, extractionData, validationItems }) {
+function DraftSalesOrder({ draftOrder, setDraftOrder, catalog, onHighlight, extractionData, validationItems, repeatOrderInfo, xrefMappings }) {
   const updateHeader = (field, value) => setDraftOrder(prev => ({ ...prev, header: { ...prev.header, [field]: value } }));
   const updateShipping = (field, value) => setDraftOrder(prev => ({ ...prev, shipping: { ...prev.shipping, [field]: value } }));
   const updateLineItem = (id, field, value) => setDraftOrder(prev => ({
@@ -533,19 +673,26 @@ function DraftSalesOrder({ draftOrder, setDraftOrder, catalog, onHighlight, extr
 
   // Flag lookup: map validation field paths to draft field keys
   const flaggedFields = useMemo(() => {
-    if (!validationItems || validationItems.length === 0) return {};
     const map = {};
-    for (const item of validationItems) {
-      const f = item.field || "";
-      if (f.includes("po_reference")) map.poNumber = item;
-      if (f.includes("requested_date") || f.includes("delivery_date")) map.deliveryDate = item;
-      if (f.includes("address")) map.shipTo = item;
-      if (f.includes("customer") && !f.includes("contact")) map.customer = item;
-      const lm = f.match(/line_items\[(\d+)\]/);
-      if (lm) { if (!map.lineItems) map.lineItems = {}; map.lineItems[parseInt(lm[1], 10)] = item; }
+    if (validationItems && validationItems.length > 0) {
+      for (const item of validationItems) {
+        const f = item.field || "";
+        if (f.includes("po_reference")) map.poNumber = item;
+        if (f.includes("requested_date") || f.includes("delivery_date")) map.deliveryDate = item;
+        if (f.includes("address")) map.shipTo = item;
+        if (f.includes("customer") && !f.includes("contact")) map.customer = item;
+        const lm = f.match(/line_items\[(\d+)\]/);
+        if (lm) { if (!map.lineItems) map.lineItems = {}; map.lineItems[parseInt(lm[1], 10)] = item; }
+      }
+    }
+    // Client-side flag: shipping method inferred from rush keywords
+    const allNotes = [extractionData?.delivery?.notes, ...(extractionData?.line_items || []).map(li => li.notes)].filter(Boolean).join(" ");
+    const rushMatch = allNotes.match(/\b(RUSH|urgent|expedit(?:e|ed)?|ASAP)\b/i);
+    if (rushMatch) {
+      map.shippingMethod = { field: "delivery.method", assumed_value: "Express", extracted_value: rushMatch[0], message: `Shipping set to Express based on "${rushMatch[0]}" note — verify` };
     }
     return map;
-  }, [validationItems]);
+  }, [validationItems, extractionData]);
 
   const flagStyle = (base, key) => {
     const flag = typeof key === "number" ? flaggedFields.lineItems?.[key] : flaggedFields[key];
@@ -581,9 +728,12 @@ function DraftSalesOrder({ draftOrder, setDraftOrder, catalog, onHighlight, extr
 
       {/* ERP Form Header Bar */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px", background: "#F8FAFC", borderRadius: 8, border: `1px solid ${T.border}` }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
           <span style={{ fontFamily: T.fontMono, fontSize: 12, fontWeight: 700, color: T.text }}>Sales Order</span>
           <span style={{ fontFamily: T.fontMono, fontSize: 9, fontWeight: 700, padding: "2px 8px", borderRadius: 999, background: T.accentLight, color: T.accent, border: "1px solid #BFDBFE", letterSpacing: "0.5px" }}>DRAFT</span>
+          {repeatOrderInfo && (
+            <span style={{ fontFamily: T.fontMono, fontSize: 9, fontWeight: 700, padding: "2px 8px", borderRadius: 999, background: T.tealLight, color: T.teal, border: `1px solid ${T.tealBorder}`, letterSpacing: "0.5px" }}>🔄 RETURNING CUSTOMER — {repeatOrderInfo.totalOrders} PREVIOUS ORDERS</span>
+          )}
         </div>
         <span style={{ fontFamily: T.fontMono, fontSize: 11, color: T.textTertiary }}>SO-{new Date().getFullYear()}-DRAFT</span>
       </div>
@@ -621,9 +771,15 @@ function DraftSalesOrder({ draftOrder, setDraftOrder, catalog, onHighlight, extr
             <input style={draftInputStyle} value={draftOrder.header.salesRep} onChange={e => updateHeader("salesRep", e.target.value)} placeholder="Assign rep..." />
           </div>
         </div>
-        <div style={{ marginTop: 12 }}>
+        <div style={{ marginTop: 12 }} onMouseEnter={() => {
+          const terms = [];
+          if (extractionData?.delivery?.notes) terms.push(extractionData.delivery.notes);
+          (extractionData?.line_items || []).forEach(item => { if (item.notes) terms.push(item.notes); });
+          (extractionData?.flags || []).forEach(f => { if (f.message) terms.push(f.message); });
+          hl(terms);
+        }} onMouseLeave={clearHl}>
           <label style={draftLabelStyle}>Memo</label>
-          <input style={draftInputStyle} value={draftOrder.header.memo} onChange={e => updateHeader("memo", e.target.value)} placeholder="Internal order notes..." />
+          <textarea style={{ ...draftInputStyle, resize: "vertical", minHeight: 38, lineHeight: 1.5 }} rows={draftOrder.header.memo ? Math.min(draftOrder.header.memo.split("\n").length + 1, 6) : 1} value={draftOrder.header.memo} onChange={e => updateHeader("memo", e.target.value)} placeholder="Internal order notes..." />
         </div>
       </div>
 
@@ -641,11 +797,12 @@ function DraftSalesOrder({ draftOrder, setDraftOrder, catalog, onHighlight, extr
             <input type="date" style={flagStyle(draftInputStyle, "deliveryDate")} value={draftOrder.shipping.requestedDate} onChange={e => updateShipping("requestedDate", e.target.value)} />
             <FieldFlag fieldKey="deliveryDate" />
           </div>
-          <div>
+          <div onMouseEnter={() => { if (flaggedFields.shippingMethod) hl(["RUSH", "rush", "urgent", "URGENT", "ASAP", "expedite"]); }} onMouseLeave={clearHl}>
             <label style={draftLabelStyle}>Shipping Method</label>
-            <select style={draftSelectStyle} value={draftOrder.shipping.shippingMethod} onChange={e => updateShipping("shippingMethod", e.target.value)}>
+            <select style={flagStyle(draftSelectStyle, "shippingMethod")} value={draftOrder.shipping.shippingMethod} onChange={e => updateShipping("shippingMethod", e.target.value)}>
               {["Standard Ground", "Express", "Freight LTL", "Will Call"].map(m => <option key={m} value={m}>{m}</option>)}
             </select>
+            <FieldFlag fieldKey="shippingMethod" />
           </div>
         </div>
       </div>
@@ -698,12 +855,22 @@ function DraftSalesOrder({ draftOrder, setDraftOrder, catalog, onHighlight, extr
                           ));
                         })()}
                       </select>
+                      {li._customerCode && <div style={{ fontSize: 9, color: T.purple, marginTop: 2, fontFamily: T.fontMono }}>🔗 {li._customerCode}</div>}
+                      {li._substitution && <div style={{ fontSize: 9, color: T.accent, marginTop: 2, fontFamily: T.fontMono }}>⇄ from {li._substitution.originalSku}</div>}
                     </td>
                     <td style={{ padding: "8px 6px", minWidth: 160 }} onMouseEnter={() => hl([origItem?.description, li.description].filter(Boolean))} onMouseLeave={clearHl}>
                       <input style={{ ...draftInputStyle, fontSize: 12, padding: "5px 8px" }} value={li.description} onChange={e => updateLineItem(li.id, "description", e.target.value)} />
                     </td>
                     <td style={{ padding: "8px 6px", width: 80 }} onMouseEnter={() => hl([origItem?.quantity != null ? String(origItem.quantity) : null, lineFlag?.extracted_value].filter(Boolean))} onMouseLeave={clearHl}>
                       <input type="number" min="0" style={{ ...draftInputStyle, fontSize: 12, padding: "5px 8px", fontFamily: T.fontMono, textAlign: "right", minWidth: 60, ...(lineFlag ? { borderColor: T.amberBorder, background: T.amberLight } : {}) }} value={li.quantity} onChange={e => updateLineItem(li.id, "quantity", parseFloat(e.target.value) || 0)} />
+                      {repeatOrderInfo && (() => {
+                        const d = repeatOrderInfo.diff.find(d => d.sku === li.catalogSku);
+                        if (!d || d.type === "unchanged") return null;
+                        if (d.type === "new_item") return <div style={{ fontSize: 9, color: T.accent, marginTop: 1, textAlign: "right", fontFamily: T.fontMono }}>✦ new</div>;
+                        if (d.type === "qty_increased") return <div style={{ fontSize: 9, color: T.teal, marginTop: 1, textAlign: "right", fontFamily: T.fontMono }}>↑ {d.prevQty}</div>;
+                        if (d.type === "qty_decreased") return <div style={{ fontSize: 9, color: T.amber, marginTop: 1, textAlign: "right", fontFamily: T.fontMono }}>↓ {d.prevQty}</div>;
+                        return null;
+                      })()}
                     </td>
                     <td style={{ padding: "8px 10px", fontFamily: T.fontMono, fontSize: 11, color: T.textSecondary, whiteSpace: "nowrap" }} onMouseEnter={() => hl([origItem?.uom].filter(Boolean))} onMouseLeave={clearHl}>{li.uom || "—"}</td>
                     <td style={{ padding: "8px 6px", width: 95 }} onMouseEnter={() => hl([origItem?.unit_price != null ? String(origItem.unit_price) : null].filter(Boolean))} onMouseLeave={clearHl}>
@@ -756,6 +923,92 @@ function DraftSalesOrder({ draftOrder, setDraftOrder, catalog, onHighlight, extr
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+// ─── Repeat Order Intelligence Card ──────────────────────────────────────────
+
+function RepeatOrderCard({ repeatOrderInfo }) {
+  if (!repeatOrderInfo) return null;
+  const { customerName, customerSince, totalOrders, lastOrderDate, lastOrderPO, diff } = repeatOrderInfo;
+  const changes = diff.filter(d => d.type !== "unchanged");
+
+  const badgeStyles = {
+    qty_increased: { bg: T.tealLight, color: T.teal, border: T.tealBorder, icon: "↑", label: "Qty Up" },
+    qty_decreased: { bg: T.amberLight, color: T.amber, border: T.amberBorder, icon: "↓", label: "Qty Down" },
+    new_item: { bg: T.accentLight, color: T.accent, border: "#BFDBFE", icon: "✦", label: "New" },
+    removed: { bg: "#FEF2F2", color: T.red, border: "#FECACA", icon: "✕", label: "Dropped" },
+  };
+
+  return (
+    <div style={{ background: T.tealLight, borderRadius: T.radiusLg, border: `1px solid ${T.tealBorder}`, padding: "18px 20px", display: "flex", flexDirection: "column", gap: 14 }}>
+      {/* Header */}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <span style={{ fontSize: 16 }}>🔄</span>
+          <span style={{ fontFamily: T.fontMono, fontSize: 12, fontWeight: 700, color: T.teal, letterSpacing: "0.3px" }}>Repeat Order Intelligence</span>
+        </div>
+        <span style={{ fontFamily: T.fontMono, fontSize: 10, fontWeight: 700, padding: "3px 10px", borderRadius: 999, background: T.surface, color: T.teal, border: `1px solid ${T.tealBorder}` }}>{changes.length} change(s) from last order</span>
+      </div>
+
+      {/* Customer Context */}
+      <div style={{ display: "flex", gap: 20, padding: "10px 14px", background: T.surface, borderRadius: T.radiusSm, border: `1px solid ${T.tealBorder}` }}>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontFamily: T.fontMono, fontSize: 9, fontWeight: 700, color: T.textTertiary, textTransform: "uppercase", letterSpacing: "0.5px" }}>Customer Since</div>
+          <div style={{ fontSize: 13, fontWeight: 600, color: T.text, marginTop: 2 }}>{new Date(customerSince).toLocaleDateString("en-US", { month: "short", year: "numeric" })}</div>
+        </div>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontFamily: T.fontMono, fontSize: 9, fontWeight: 700, color: T.textTertiary, textTransform: "uppercase", letterSpacing: "0.5px" }}>Previous Orders</div>
+          <div style={{ fontSize: 13, fontWeight: 600, color: T.text, marginTop: 2 }}>{totalOrders}</div>
+        </div>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontFamily: T.fontMono, fontSize: 9, fontWeight: 700, color: T.textTertiary, textTransform: "uppercase", letterSpacing: "0.5px" }}>Last Order</div>
+          <div style={{ fontSize: 13, fontWeight: 600, color: T.text, marginTop: 2 }}>{new Date(lastOrderDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</div>
+          <div style={{ fontFamily: T.fontMono, fontSize: 10, color: T.textTertiary, marginTop: 1 }}>{lastOrderPO}</div>
+        </div>
+      </div>
+
+      {/* Diff Table */}
+      {changes.length > 0 && (
+        <div style={{ border: `1px solid ${T.tealBorder}`, borderRadius: T.radiusSm, overflow: "hidden", background: T.surface }}>
+          <div style={{ overflowX: "auto" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
+            <thead>
+              <tr style={{ borderBottom: `2px solid ${T.tealBorder}`, background: T.tealLight }}>
+                {["Change", "Item", "Qty"].map(h => (
+                  <th key={h} style={{ padding: "7px 12px", textAlign: "left", fontFamily: T.fontMono, fontSize: 9, fontWeight: 700, color: T.teal, textTransform: "uppercase", letterSpacing: "0.5px", whiteSpace: "nowrap" }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {changes.map((d, i) => {
+                const badge = badgeStyles[d.type];
+                return (
+                  <tr key={i} style={{ borderBottom: `1px solid ${T.borderLight}` }}>
+                    <td style={{ padding: "8px 10px", width: 80 }}>
+                      <span style={{ display: "inline-flex", alignItems: "center", gap: 3, padding: "2px 6px", borderRadius: 999, fontSize: 10, fontWeight: 700, fontFamily: T.fontMono, background: badge.bg, color: badge.color, border: `1px solid ${badge.border}`, whiteSpace: "nowrap" }}>
+                        {badge.icon} {badge.label}
+                      </span>
+                    </td>
+                    <td style={{ padding: "8px 10px", fontSize: 12, color: T.text, fontWeight: 500 }}>{d.description}</td>
+                    <td style={{ padding: "8px 10px", fontFamily: T.fontMono, fontSize: 12, textAlign: "right", whiteSpace: "nowrap" }}>
+                      {d.type === "removed" ? (
+                        <span style={{ color: T.red }}>{d.prevQty} → 0</span>
+                      ) : d.type === "new_item" ? (
+                        <span style={{ fontWeight: 600, color: T.accent }}>{d.currentQty != null ? d.currentQty : d.quantity}</span>
+                      ) : (
+                        <span><span style={{ color: T.textTertiary }}>{d.prevQty}</span> <span style={{ color: T.textTertiary }}>→</span> <span style={{ fontWeight: 600, color: T.text }}>{d.currentQty}</span></span>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -872,19 +1125,38 @@ function HighlightedRawInput({ text, terms, scrollRef }) {
 
 function ResultsView({ data, onHighlight }) {
   if (!data) return null;
-  const { customer, po_reference, order_date, delivery, line_items, flags, totals, validation_items } = data;
+  const { customer, po_reference, order_date, delivery, line_items, flags, totals, validation_items, memo: extractedMemo } = data;
   const hl = (terms) => onHighlight?.(terms);
   const clearHl = () => onHighlight?.([]);
 
-  // Run SKU matching against demo catalog (memoized to avoid recomputation on draft edits)
-  const matchedItems = useMemo(() => (line_items || []).map(item => ({
-    ...item,
-    match: matchSkuToCatalog(item),
-  })), [line_items]);
+  // Step 1: Cross-reference customer codes to internal SKUs
+  const { items: resolvedItems, mappings: xrefMappings } = useMemo(
+    () => crossReferenceCustomerCodes(line_items || [], customer?.name),
+    [line_items, customer?.name]
+  );
+
+  // Step 2: Match to catalog (using resolved SKUs), then apply substitutions
+  const matchedItems = useMemo(() => {
+    const rawMatched = resolvedItems.map(item => {
+      const match = matchSkuToCatalog(item);
+      // Tag cross-referenced items with xref match type
+      if (item._customerCode && match && match.matchType === "exact") match.matchType = "xref";
+      return { ...item, match };
+    });
+    return applySubstitutions(rawMatched);
+  }, [resolvedItems]);
+
+  // Step 3: Detect repeat order
+  const repeatOrderInfo = useMemo(
+    () => detectRepeatOrder(customer?.name, matchedItems),
+    [customer?.name, matchedItems]
+  );
 
   const matchStats = {
     exact: matchedItems.filter(i => i.match?.matchType === "exact").length,
-    fuzzy: matchedItems.filter(i => i.match && i.match.matchType !== "exact").length,
+    xref: matchedItems.filter(i => i.match?.matchType === "xref").length,
+    substitutions: matchedItems.filter(i => i._substitution).length,
+    fuzzy: matchedItems.filter(i => i.match && !["exact", "xref", "substitution"].includes(i.match.matchType)).length,
     unmatched: matchedItems.filter(i => !i.match).length,
     stockWarnings: matchedItems.filter(i => i.match?.catalogItem?.stock === 0 || (i.match?.catalogItem && i.quantity > i.match.catalogItem.stock)).length,
   };
@@ -928,12 +1200,17 @@ function ResultsView({ data, onHighlight }) {
           poNumber: po_reference || assumed("po_reference") || "",
           terms: "Net 30",
           salesRep: "",
-          memo: "",
+          memo: extractedMemo || "",
         },
         shipping: {
           shipTo: delivery?.address || assumed("address") || "",
           requestedDate: reqDate,
-          shippingMethod: "Standard Ground",
+          shippingMethod: (() => {
+            const allNotes = [delivery?.notes, delivery?.method, extractedMemo, ...(line_items || []).map(li => li.notes)].join(" ").toLowerCase();
+            if (/\brush\b|urgent|expedit|asap|priority\s*ship/i.test(allNotes)) return "Express";
+            if (/freight|ltl|truck/i.test(allNotes)) return "Freight LTL";
+            return "Standard Ground";
+          })(),
         },
         lineItems: matchedItems.map((item, i) => {
           const cat = item.match?.catalogItem;
@@ -947,6 +1224,8 @@ function ResultsView({ data, onHighlight }) {
             quantity: qty,
             uom: cat?.uom || item.uom || "",
             rate: cat?.price || item.unit_price || 0,
+            _substitution: item._substitution || null,
+            _customerCode: item._customerCode || null,
           };
         }),
         shippingCost: totals?.freight || 0,
@@ -965,10 +1244,15 @@ function ResultsView({ data, onHighlight }) {
           setDraftOrder={setDraftOrder}
           catalog={DEMO_CATALOG}
           onHighlight={onHighlight}
-          extractionData={{ customer, po_reference, order_date, delivery, line_items }}
+          extractionData={{ customer, po_reference, order_date, delivery, line_items: matchedItems, flags }}
           validationItems={valItems}
+          repeatOrderInfo={repeatOrderInfo}
+          xrefMappings={xrefMappings}
         />
       )}
+
+      {/* ── Repeat Order Intelligence ── */}
+      {repeatOrderInfo && <RepeatOrderCard repeatOrderInfo={repeatOrderInfo} />}
 
       {/* ── "See how Flora did it" expandable section ── */}
       <div>
@@ -1087,7 +1371,55 @@ function ResultsView({ data, onHighlight }) {
               )}
             </StepCard>
 
-            <StepCard number="2" title="Match to Product Catalog" description={`Matched ${matchStats.exact + matchStats.fuzzy} of ${matchedItems.length} items to your catalog. ${matchStats.unmatched > 0 ? `${matchStats.unmatched} need manual review.` : "All items resolved."}`} status="active">
+            <StepCard number="2" title="Match to Product Catalog" description={(() => {
+              const parts = [];
+              if (matchStats.xref > 0) parts.push(`${matchStats.xref} cross-referenced`);
+              if (matchStats.exact > 0) parts.push(`${matchStats.exact} exact`);
+              if (matchStats.fuzzy > 0) parts.push(`${matchStats.fuzzy} fuzzy`);
+              if (matchStats.substitutions > 0) parts.push(`${matchStats.substitutions} substituted`);
+              const resolved = matchStats.exact + matchStats.fuzzy + matchStats.xref + matchStats.substitutions;
+              return `${resolved} of ${matchedItems.length} items matched (${parts.join(", ")}). ${matchStats.unmatched > 0 ? `${matchStats.unmatched} need manual review.` : "All items resolved."}`;
+            })()} status="active">
+
+              {/* Cross-Reference Banner */}
+              {xrefMappings && xrefMappings.length > 0 && (
+                <div style={{ marginBottom: 14, padding: "12px 16px", borderRadius: T.radiusSm, background: T.purpleLight, border: `1px solid #C4B5FD`, fontSize: 12 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8, fontWeight: 700, color: T.purple }}>
+                    <span>🔗</span> Customer Code Cross-Reference — {xrefMappings.length} item(s) resolved
+                  </div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+                    {xrefMappings.map((m, i) => (
+                      <div key={i} style={{ fontFamily: T.fontMono, fontSize: 11, color: T.purple, display: "flex", alignItems: "center", gap: 6 }}>
+                        <span style={{ color: T.textTertiary }}>{m.customerCode}</span>
+                        <span style={{ color: T.textTertiary }}>→</span>
+                        <span style={{ fontWeight: 600 }}>{m.internalSku}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Substitution Banner */}
+              {matchStats.substitutions > 0 && (
+                <div style={{ marginBottom: 14, padding: "12px 16px", borderRadius: T.radiusSm, background: T.accentLight, border: `1px solid #BFDBFE`, fontSize: 12 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8, fontWeight: 700, color: T.accent }}>
+                    <span>⇄</span> Substitution Applied
+                  </div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+                    {matchedItems.filter(item => item._substitution).map((item, i) => (
+                      <div key={i} style={{ fontFamily: T.fontMono, fontSize: 11, color: T.accent, display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                        <span style={{ fontWeight: 600, color: T.red }}>{item._substitution.originalSku}</span>
+                        <span style={{ color: T.textTertiary }}>(out of stock)</span>
+                        <span style={{ color: T.textTertiary }}>→</span>
+                        <span style={{ fontWeight: 600, color: T.green }}>{item._substitution.substituteSku}</span>
+                        <span style={{ color: T.textTertiary }}>({item._substitution.substituteStock} in stock)</span>
+                        {item._substitution.customerAuthorized && <span style={{ fontSize: 10, padding: "1px 6px", borderRadius: 999, background: "#DBEAFE", color: T.accent, fontWeight: 600 }}>customer authorized</span>}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {/* SKU Matching Results Table */}
               <div style={{ overflowX: "auto", margin: "0 -22px", padding: "0 22px" }}>
                 <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
@@ -1593,10 +1925,10 @@ export default function FloraDemo() {
             {/* Stats */}
             <div style={{ marginTop: 48, display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(155px, 1fr))", gap: 10 }}>
               {[
-                { value: "< 3s", label: "Avg extraction time" },
-                { value: "97.2%", label: "Field accuracy" },
-                { value: "38", label: "Demo catalog SKUs" },
-                { value: "0", label: "Setup required" },
+                { value: "60-80%", label: "Less manual order entry" },
+                { value: "$250K+", label: "Labor cost savings annually" },
+                { value: "$200K+", label: "Preventable error & chargeback impact" },
+                { value: "<10%", label: "Orders require human intervention" },
               ].map(stat => (
                 <div key={stat.label} style={{ padding: "20px 16px", borderRadius: T.radius, background: T.surface, border: `1px solid ${T.border}`, textAlign: "center" }}>
                   <div style={{ fontFamily: T.fontMono, fontSize: 24, fontWeight: 800, color: T.accent, marginBottom: 4 }}>{stat.value}</div>
