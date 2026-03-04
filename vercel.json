@@ -1,9 +1,4 @@
 {
-  "functions": {
-    "api/anthropic.mjs": {
-      "runtime": "@vercel/node@3"
-    }
-  },
   "rewrites": [
     { "source": "/((?!api|assets|samples).*)", "destination": "/index.html" }
   ]
