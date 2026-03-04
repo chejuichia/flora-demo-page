@@ -1,5 +1,11 @@
 {
-  "rewrites": [
-    { "source": "/((?!api|assets|samples).*)", "destination": "/index.html" }
+  "buildCommand": "vite build",
+  "outputDirectory": "dist",
+  "framework": null,
+  "routes": [
+    { "src": "/api/anthropic", "dest": "/api/anthropic.js" },
+    { "src": "/assets/(.*)", "dest": "/assets/$1" },
+    { "src": "/samples/(.*)", "dest": "/samples/$1" },
+    { "src": "/(.*)", "dest": "/index.html" }
   ]
 }
