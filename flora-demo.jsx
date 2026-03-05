@@ -2076,29 +2076,51 @@ export default function FloraDemo() {
         </div>
       ) : (
 
-      /* Input State — centered narrow layout */
-      <main style={{ maxWidth: 920, margin: "0 auto", padding: "40px 20px 80px" }}>
-          <>
-            {/* Hero */}
-            <div style={{ textAlign: "center", marginBottom: 44 }}>
-              <div style={{
-                display: "inline-flex", alignItems: "center", gap: 6,
-                padding: "4px 14px", borderRadius: 999,
-                background: T.accentLight, border: `1px solid #BFDBFE`,
-                fontFamily: T.fontMono, fontSize: 11, fontWeight: 600,
-                color: T.accent, letterSpacing: "0.5px", marginBottom: 20,
-              }}>
-                <span style={{ width: 6, height: 6, borderRadius: "50%", background: T.green, animation: "ofpulse 2s ease-in-out infinite" }} />
-                LIVE DEMO
-              </div>
-              <h1 style={{ fontSize: "clamp(28px, 4.5vw, 44px)", fontWeight: 700, lineHeight: 1.15, letterSpacing: "-0.8px", marginBottom: 14, color: T.text }}>
-                Your team re-keys orders<br />
-                <span style={{ color: T.accent }}>40 hours a week.</span>
-              </h1>
-              <p style={{ fontSize: 16, color: T.textSecondary, maxWidth: 540, margin: "0 auto", lineHeight: 1.65 }}>
-                Manual order entry burns labor, delays fulfillment, and lets errors slip through to the warehouse floor. Flora AI reads every order from every channel and delivers a verified sales order — ready to book in your ERP.
-              </p>
+      /* Input State */
+      <>
+        {/* Full-width Hero with background image */}
+        <section style={{
+          width: "100%",
+          minHeight: 380,
+          backgroundImage: "url('/hero-bg.jpg')",
+          backgroundSize: "cover",
+          backgroundPosition: "center top",
+          backgroundRepeat: "no-repeat",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          position: "relative",
+        }}>
+          <div style={{
+            textAlign: "center",
+            maxWidth: 920,
+            padding: "80px 20px 60px",
+            position: "relative",
+            zIndex: 1,
+          }}>
+            <div style={{
+              display: "inline-flex", alignItems: "center", gap: 6,
+              padding: "4px 14px", borderRadius: 999,
+              background: "rgba(255,255,255,0.85)", border: `1px solid #BFDBFE`,
+              fontFamily: T.fontMono, fontSize: 11, fontWeight: 600,
+              color: T.accent, letterSpacing: "0.5px", marginBottom: 20,
+              backdropFilter: "blur(4px)",
+            }}>
+              <span style={{ width: 6, height: 6, borderRadius: "50%", background: T.green, animation: "ofpulse 2s ease-in-out infinite" }} />
+              LIVE DEMO
             </div>
+            <h1 style={{ fontSize: "clamp(28px, 4.5vw, 44px)", fontWeight: 700, lineHeight: 1.15, letterSpacing: "-0.8px", marginBottom: 14, color: T.text }}>
+              Your team re-keys orders<br />
+              <span style={{ color: T.accent }}>40 hours a week.</span>
+            </h1>
+            <p style={{ fontSize: 16, color: T.textSecondary, maxWidth: 540, margin: "0 auto", lineHeight: 1.65 }}>
+              Manual order entry burns labor, delays fulfillment, and lets errors slip through to the warehouse floor. Flora AI reads every order from every channel and delivers a verified sales order — ready to book in your ERP.
+            </p>
+          </div>
+        </section>
+
+        {/* Content below hero — centered narrow layout */}
+        <main style={{ maxWidth: 920, margin: "0 auto", padding: "40px 20px 80px" }}>
 
             {/* Bridge text */}
             <div style={{ textAlign: "center", marginBottom: 24 }}>
@@ -2339,8 +2361,8 @@ export default function FloraDemo() {
                 onMouseLeave={e => { e.target.style.background = T.accent; e.target.style.boxShadow = `0 1px 3px ${T.accent}40`; }}
               >Get Started with Flora →</button>
             </div>
-          </>
-      </main>
+        </main>
+      </>
       )}
     </div>
   );
