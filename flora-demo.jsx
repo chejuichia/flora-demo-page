@@ -2106,7 +2106,7 @@ export default function FloraDemo() {
               Flora Order Intelligence
             </p>
             <h1 style={{ fontSize: "clamp(28px, 4.5vw, 44px)", fontWeight: 700, lineHeight: 1.15, letterSpacing: "-0.8px", marginBottom: 16, color: T.text, maxWidth: 600 }}>
-              Eliminate manual order entry with AI-powered automation
+              Scale order volume with instant, AI-powered order processing
             </h1>
             <p style={{ fontSize: 16, color: T.textSecondary, maxWidth: 520, lineHeight: 1.65 }}>
               Flora reads orders from any channel and format, matches items to your catalog, and delivers verified, ERP-ready sales orders — without the re-keying.
