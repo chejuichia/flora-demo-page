@@ -1546,7 +1546,27 @@ export default function FloraDemo() {
           messages: [{ role: "user", content: EXTRACTION_PROMPT + text }],
         }),
       });
-      if (!response.ok) throw new Error(`API error: ${response.status}`);
+      if (!response.ok) {
+        let errMsg = `API error: ${response.status}`;
+        try {
+          const errData = await response.json();
+          const errType = errData?.error?.type || "";
+          if (response.status === 429 || errType === "rate_limit_error") {
+            errMsg = "We've hit our API rate limit. Please wait a minute and try again.";
+          } else if (response.status === 529 || errType === "overloaded_error") {
+            errMsg = "The AI service is temporarily overloaded. Please try again in a few moments.";
+          } else if (errType === "authentication_error" || response.status === 401) {
+            errMsg = "API authentication failed — the demo API key may have expired or been revoked.";
+          } else if (errType === "permission_error" || response.status === 403) {
+            errMsg = "API access denied — the demo may have exhausted its API credits. Please contact us.";
+          } else if (errType === "invalid_request_error" || response.status === 400) {
+            errMsg = "Invalid request sent to the AI service. Please try a different input.";
+          } else if (errData?.error?.message) {
+            errMsg = errData.error.message;
+          }
+        } catch {}
+        throw new Error(errMsg);
+      }
       const data = await response.json();
       const rawText = data.content.map(i => (i.type === "text" ? i.text : "")).filter(Boolean).join("\n");
       const cleaned = rawText.replace(/```json|```/g, "").trim();
