@@ -1123,7 +1123,7 @@ function HighlightedRawInput({ text, terms, scrollRef }) {
 
 // ─── Results View ───────────────────────────────────────────────────────────
 
-function ResultsView({ data, onHighlight }) {
+function ResultsView({ data, onHighlight, onGetStarted }) {
   if (!data) return null;
   const { customer, po_reference, order_date, delivery, line_items, flags, totals, validation_items, memo: extractedMemo } = data;
   const hl = (terms) => onHighlight?.(terms);
@@ -1498,6 +1498,7 @@ function ResultsView({ data, onHighlight }) {
             You just saw extraction, catalog matching, and smart validation on a single order. In production, Flora processes hundreds per day — learning your customers' patterns, auto-resolving ambiguities, and drafting directly into your ERP.
           </div>
           <button
+            onClick={onGetStarted}
             style={{ padding: "14px 40px", borderRadius: T.radius, background: T.accent, color: "#fff", fontWeight: 700, fontSize: 14, border: "none", cursor: "pointer", boxShadow: `0 1px 3px ${T.accent}40`, transition: "all 0.15s ease", fontFamily: T.font }}
             onMouseEnter={e => { e.target.style.background = T.accentDark; e.target.style.boxShadow = `0 4px 12px ${T.accent}30`; }}
             onMouseLeave={e => { e.target.style.background = T.accent; e.target.style.boxShadow = `0 1px 3px ${T.accent}40`; }}
@@ -1521,6 +1522,8 @@ export default function FloraDemo() {
   const [hoveredSample, setHoveredSample] = useState(null);
   const [showTryOwn, setShowTryOwn] = useState(false);
   const [tryOwnMode, setTryOwnMode] = useState(null); // "paste" | "upload"
+  const [showQualify, setShowQualify] = useState(false);
+  const [qualifyAnswers, setQualifyAnswers] = useState({ volume: "", erp: "", pain: "" });
   const [pasteText, setPasteText] = useState("");
   const [uploadedText, setUploadedText] = useState("");
   const [uploadedFileName, setUploadedFileName] = useState("");
@@ -1533,6 +1536,36 @@ export default function FloraDemo() {
   const fileInputRef = useRef(null);
   const rawInputScrollRef = useRef(null);
   const [highlightTerms, setHighlightTerms] = useState([]);
+
+  // Load Calendly widget script
+  useEffect(() => {
+    if (document.querySelector('script[src*="calendly.com"]')) return;
+    const s = document.createElement("script");
+    s.src = "https://assets.calendly.com/assets/external/widget.js";
+    s.async = true;
+    document.head.appendChild(s);
+    const link = document.createElement("link");
+    link.href = "https://assets.calendly.com/assets/external/widget.css";
+    link.rel = "stylesheet";
+    document.head.appendChild(link);
+  }, []);
+
+  const openCalendly = () => {
+    const q = qualifyAnswers;
+    const params = new URLSearchParams({
+      utm_source: "flora_demo",
+      utm_content: [q.volume, q.erp, q.pain].filter(Boolean).join(" | "),
+    });
+    if (window.Calendly) {
+      window.Calendly.initPopupWidget({
+        url: `https://calendly.com/juichia1982/30min?${params.toString()}`,
+      });
+    }
+    setShowQualify(false);
+    setQualifyAnswers({ volume: "", erp: "", pain: "" });
+  };
+
+  const handleGetStarted = () => setShowQualify(true);
 
   const extractOrder = useCallback(async (text, source, image) => {
     setIsProcessing(true);
@@ -1668,7 +1701,7 @@ export default function FloraDemo() {
           <span style={{ fontWeight: 700, fontSize: 17, color: T.text, letterSpacing: "-0.3px" }}>Flora</span>
           <span style={{ fontSize: 11, color: T.textTertiary, fontWeight: 500, letterSpacing: "0.3px", borderLeft: `1px solid ${T.border}`, paddingLeft: 8 }}>Order Intelligence</span>
         </div>
-        <button style={{
+        <button onClick={handleGetStarted} style={{
           ...btnBase, padding: "8px 20px", borderRadius: T.radiusSm,
           background: T.accent, color: "#fff", fontWeight: 600, fontSize: 13,
           boxShadow: `0 1px 2px ${T.accent}30`,
@@ -1677,6 +1710,107 @@ export default function FloraDemo() {
           onMouseLeave={e => { e.target.style.background = T.accent; }}
         >Get Started with Flora</button>
       </header>
+
+      {/* ── Qualifying Modal ── */}
+      {showQualify && (
+        <div style={{
+          position: "fixed", inset: 0, zIndex: 100,
+          background: "rgba(0,0,0,0.4)", backdropFilter: "blur(4px)",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          padding: 20, animation: "offade 0.2s ease",
+        }} onClick={e => { if (e.target === e.currentTarget) setShowQualify(false); }}>
+          <div style={{
+            background: T.surface, borderRadius: T.radiusLg,
+            border: `1px solid ${T.border}`, width: "100%", maxWidth: 480,
+            boxShadow: "0 20px 60px rgba(0,0,0,0.15)",
+            animation: "offade 0.25s ease",
+          }}>
+            {/* Modal header */}
+            <div style={{ padding: "20px 24px 16px", borderBottom: `1px solid ${T.borderLight}` }}>
+              <div style={{ fontSize: 18, fontWeight: 700, color: T.text, marginBottom: 4 }}>
+                Get Started with Flora
+              </div>
+              <div style={{ fontSize: 13, color: T.textSecondary, lineHeight: 1.5 }}>
+                Help us prepare a walkthrough tailored to your operation.
+              </div>
+            </div>
+
+            {/* Questions */}
+            <div style={{ padding: "20px 24px", display: "flex", flexDirection: "column", gap: 18 }}>
+              {/* Q1: Order volume */}
+              <div>
+                <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: T.textSecondary, marginBottom: 6, fontFamily: T.fontMono, letterSpacing: "0.3px" }}>
+                  How many orders does your team process per week?
+                </label>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                  {["Under 100", "100–300", "300–500", "500–1,000", "1,000+"].map(opt => (
+                    <button key={opt} onClick={() => setQualifyAnswers(a => ({ ...a, volume: opt }))} style={{
+                      ...btnBase, padding: "8px 14px", borderRadius: T.radiusSm, fontSize: 12, fontWeight: 600,
+                      background: qualifyAnswers.volume === opt ? T.accentLight : T.bg,
+                      color: qualifyAnswers.volume === opt ? T.accent : T.textSecondary,
+                      border: `1px solid ${qualifyAnswers.volume === opt ? T.accent : T.border}`,
+                    }}>{opt}</button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Q2: ERP system */}
+              <div>
+                <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: T.textSecondary, marginBottom: 6, fontFamily: T.fontMono, letterSpacing: "0.3px" }}>
+                  Which ERP system do you use?
+                </label>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                  {["NetSuite", "SAP", "Dynamics 365", "Sage", "QuickBooks", "Other"].map(opt => (
+                    <button key={opt} onClick={() => setQualifyAnswers(a => ({ ...a, erp: opt }))} style={{
+                      ...btnBase, padding: "8px 14px", borderRadius: T.radiusSm, fontSize: 12, fontWeight: 600,
+                      background: qualifyAnswers.erp === opt ? T.accentLight : T.bg,
+                      color: qualifyAnswers.erp === opt ? T.accent : T.textSecondary,
+                      border: `1px solid ${qualifyAnswers.erp === opt ? T.accent : T.border}`,
+                    }}>{opt}</button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Q3: Primary pain */}
+              <div>
+                <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: T.textSecondary, marginBottom: 6, fontFamily: T.fontMono, letterSpacing: "0.3px" }}>
+                  What's your biggest order entry challenge?
+                </label>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                  {["Manual re-keying takes too long", "Order errors & mis-ships", "Can't scale without adding headcount", "Too many order formats & channels"].map(opt => (
+                    <button key={opt} onClick={() => setQualifyAnswers(a => ({ ...a, pain: opt }))} style={{
+                      ...btnBase, padding: "8px 14px", borderRadius: T.radiusSm, fontSize: 12, fontWeight: 600,
+                      background: qualifyAnswers.pain === opt ? T.accentLight : T.bg,
+                      color: qualifyAnswers.pain === opt ? T.accent : T.textSecondary,
+                      border: `1px solid ${qualifyAnswers.pain === opt ? T.accent : T.border}`,
+                    }}>{opt}</button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Modal footer */}
+            <div style={{ padding: "16px 24px 20px", borderTop: `1px solid ${T.borderLight}`, display: "flex", gap: 10, justifyContent: "flex-end" }}>
+              <button onClick={() => setShowQualify(false)} style={{
+                ...btnBase, padding: "10px 20px", borderRadius: T.radiusSm,
+                background: T.bg, color: T.textSecondary, fontSize: 13, fontWeight: 600,
+                border: `1px solid ${T.border}`,
+              }}>Cancel</button>
+              <button onClick={openCalendly}
+                disabled={!qualifyAnswers.volume || !qualifyAnswers.erp || !qualifyAnswers.pain}
+                style={{
+                  ...btnBase, padding: "10px 24px", borderRadius: T.radiusSm,
+                  background: (qualifyAnswers.volume && qualifyAnswers.erp && qualifyAnswers.pain) ? T.accent : "#E7E5E4",
+                  color: (qualifyAnswers.volume && qualifyAnswers.erp && qualifyAnswers.pain) ? "#fff" : T.textTertiary,
+                  fontSize: 13, fontWeight: 700,
+                  cursor: (qualifyAnswers.volume && qualifyAnswers.erp && qualifyAnswers.pain) ? "pointer" : "not-allowed",
+                }}>
+                Book Your Walkthrough →
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── Main ── */}
 
@@ -1784,7 +1918,7 @@ export default function FloraDemo() {
 
               {/* ── Right Panel: Automation Pipeline ── */}
               <div>
-                <ResultsView data={result} onHighlight={setHighlightTerms} />
+                <ResultsView data={result} onHighlight={setHighlightTerms} onGetStarted={handleGetStarted} />
               </div>
             </div>
 
@@ -2140,7 +2274,7 @@ export default function FloraDemo() {
               <p style={{ fontSize: 14, color: T.textSecondary, marginBottom: 20, maxWidth: 420, margin: "0 auto 20px" }}>
                 See Flora process your real orders in a 30-minute walkthrough with your team.
               </p>
-              <button style={{
+              <button onClick={handleGetStarted} style={{
                 ...btnBase, padding: "14px 36px", borderRadius: T.radius,
                 background: T.accent, color: "#fff", fontWeight: 700, fontSize: 14,
                 boxShadow: `0 1px 3px ${T.accent}40`,
