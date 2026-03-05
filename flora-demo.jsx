@@ -2317,40 +2317,6 @@ export default function FloraDemo() {
               </div>
             </div>
 
-            {/* Social proof strip */}
-            <div style={{
-              marginTop: 40, padding: "24px 20px",
-              borderRadius: T.radius, background: T.surface,
-              border: `1px solid ${T.border}`,
-            }}>
-              <p style={{
-                fontSize: 12, fontWeight: 600, color: T.textTertiary,
-                letterSpacing: "0.5px", textTransform: "uppercase",
-                fontFamily: T.fontMono, marginBottom: 16,
-              }}>
-                Built for food manufacturing teams processing 300–500 orders a week
-              </p>
-              <div style={{
-                display: "flex", alignItems: "center",
-                gap: 24, flexWrap: "wrap",
-              }}>
-                {[
-                  { icon: "\uD83C\uDFED", text: "Mid-market manufacturers" },
-                  { icon: "\uD83D\uDD12", text: "SOC 2 compliant" },
-                  { icon: "\uD83D\uDCE6", text: "Multi-channel intake" },
-                  { icon: "\u26A1", text: "Live in under 2 weeks" },
-                ].map(item => (
-                  <div key={item.text} style={{
-                    display: "flex", alignItems: "center", gap: 6,
-                    fontSize: 13, color: T.textSecondary, fontWeight: 500,
-                  }}>
-                    <span style={{ fontSize: 14 }}>{item.icon}</span>
-                    {item.text}
-                  </div>
-                ))}
-              </div>
-            </div>
-
             {/* Integration context */}
             <div id="integrations" style={{ marginTop: 24, scrollMarginTop: 120 }}>
               <div style={{ marginBottom: 16 }}>
@@ -2377,7 +2343,7 @@ export default function FloraDemo() {
                     background: T.surface, border: `1px solid ${T.border}`,
                   }}>
                     <div style={{
-                      fontFamily: T.fontMono, fontSize: 10, fontWeight: 700,
+                      fontFamily: T.fontMono, fontSize: 13, fontWeight: 800,
                       color: T.accent, letterSpacing: "0.5px",
                       textTransform: "uppercase", marginBottom: 6,
                     }}>
@@ -2386,6 +2352,27 @@ export default function FloraDemo() {
                     <div style={{ fontSize: 12, color: T.textSecondary, lineHeight: 1.5 }}>
                       {group.items}
                     </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Trust signals */}
+              <div style={{
+                marginTop: 20, paddingTop: 16,
+                borderTop: `1px solid ${T.border}`,
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
+                gap: 10,
+              }}>
+                {[
+                  { icon: "\uD83C\uDFED", label: "Mid-market manufacturers", desc: "Built for teams processing 300–500 orders/week" },
+                  { icon: "\uD83D\uDD12", label: "SOC 2 compliant", desc: "Enterprise-grade security and data handling" },
+                  { icon: "\uD83D\uDCE6", label: "Multi-channel intake", desc: "Email, fax, portal, chat — one workflow" },
+                  { icon: "\u26A1", label: "Live in under 2 weeks", desc: "Fast onboarding with your real orders" },
+                ].map(item => (
+                  <div key={item.label} style={{ padding: "12px 0" }}>
+                    <div style={{ fontSize: 14, marginBottom: 4 }}>{item.icon} <span style={{ fontWeight: 600, color: T.text, fontSize: 13 }}>{item.label}</span></div>
+                    <div style={{ fontSize: 12, color: T.textTertiary, lineHeight: 1.4 }}>{item.desc}</div>
                   </div>
                 ))}
               </div>
