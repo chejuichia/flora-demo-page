@@ -2352,11 +2352,7 @@ export default function FloraDemo() {
             </div>
 
             {/* Integration context */}
-            <div id="integrations" style={{
-              marginTop: 24, padding: "24px 20px", scrollMarginTop: 120,
-              borderRadius: T.radius, background: T.surface,
-              border: `1px solid ${T.border}`,
-            }}>
+            <div id="integrations" style={{ marginTop: 24, scrollMarginTop: 120 }}>
               <div style={{ marginBottom: 16 }}>
                 <h2 style={{ fontSize: 22, fontWeight: 700, color: T.text, letterSpacing: "-0.3px", marginBottom: 8 }}>
                   Fits your stack. Not the other way around.
@@ -2378,7 +2374,7 @@ export default function FloraDemo() {
                 ].map(group => (
                   <div key={group.label} style={{
                     padding: "16px 14px", borderRadius: T.radiusSm,
-                    background: T.bg, border: `1px solid ${T.borderLight}`,
+                    background: T.surface, border: `1px solid ${T.border}`,
                   }}>
                     <div style={{
                       fontFamily: T.fontMono, fontSize: 10, fontWeight: 700,
