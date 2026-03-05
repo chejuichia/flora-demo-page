@@ -165,6 +165,36 @@ function matchSkuToCatalog(extractedItem) {
 }
 
 
+// ─── Paste Placeholder ──────────────────────────────────────────────────────
+
+const PASTE_PLACEHOLDER = `Sarah Pham (Sunnyside Market) Mar 3
+9:12 AM Hi! This is Sarah from Sunnyside Market. Need to place our reorder for this week.
+9:13 AM Sea salt kettle chips 200g – 48 bags
+9:13 AM BBQ kettle chips 200g – 36 bags
+9:14 AM FreshFoods Sales – Miguel Morning Sarah! Got it 👍 Let me start a list.
+9:15 AM Sarah Pham Roasted red pepper hummus 300g – 60 tubs Is this the new recipe btw?
+9:16 AM Miguel – FreshFoods Yes it is — same SKU but new batch since last month.
+9:17 AM Sarah Pham Great thanks.
+9:17 AM Classic hummus 300g – 80 tubs
+9:18 AM Whole grain mustard 350ml – 24 jars
+9:19 AM Also please double check packaging on the mustard. Last order had 3 broken jars.
+9:20 AM Miguel – FreshFoods Oh no, sorry about that. I'll flag QA to double-check the packing.
+9:21 AM Sarah Pham Thanks.
+9:21 AM Butter croissants 6-pack – 40 packs
+9:22 AM Flour tortillas 12-inch 12ct – 30 packs
+9:23 AM Miguel – FreshFoods Got those.
+9:24 AM Sarah Pham Mango smoothie 500ml – 120 bottles
+9:24 AM Mixed berry smoothie 500ml – 120 bottles
+9:25 AM Garlic herb hummus 300g – 60 tubs This was out of stock last time — please confirm availability
+9:26 AM Miguel – FreshFoods Checking inventory now.
+9:27 AM Miguel – FreshFoods Looks like garlic herb hummus is back in stock 👍
+9:27 AM Sarah Pham Perfect.
+9:28 AM Ship to: Sunnyside Market 72 Harvest Lane Portland OR
+9:28 AM Miguel – FreshFoods Got it. Same delivery window as usual? Thursday morning?
+9:29 AM Sarah Pham Yes Thursday works.
+9:30 AM Miguel – FreshFoods Great. I'll send confirmation shortly.
+9:30 AM Sarah Pham Thanks!`;
+
 // ─── Sample Orders ──────────────────────────────────────────────────────────
 
 const SAMPLE_ORDERS = [
@@ -1986,7 +2016,7 @@ export default function FloraDemo() {
 
               {/* ── Right Panel: Automation Pipeline ── */}
               <div style={{ maxWidth: rawInputText ? "none" : 920, margin: rawInputText ? 0 : "0 auto", width: "100%" }}>
-                <ResultsView data={result} onHighlight={setHighlightTerms} onGetStarted={handleGetStarted} onTryOwn={() => setShowTryOwn(true)} isUserUpload={isUserUpload} />
+                <ResultsView data={result} onHighlight={setHighlightTerms} onGetStarted={handleGetStarted} onTryOwn={isUserUpload ? null : () => setShowTryOwn(true)} isUserUpload={isUserUpload} />
               </div>
             </div>
 
@@ -2056,7 +2086,7 @@ export default function FloraDemo() {
                         background: "none", color: T.textTertiary, fontSize: 12, fontWeight: 600,
                       }}>← Back</button>
                       <textarea value={pasteText} onChange={e => setPasteText(e.target.value)}
-                        placeholder={"Paste an order email, chat message, or any unstructured text…\n\nExample: \"Hey, need 50 units of Widget A and 30 of Widget B to 123 Main St by Friday. PO# 12345.\""}
+                        placeholder={PASTE_PLACEHOLDER}
                         style={{
                           width: "100%", minHeight: 180, padding: 16,
                           borderRadius: T.radius, border: `1px solid ${T.border}`,
@@ -2070,7 +2100,7 @@ export default function FloraDemo() {
                       <button onClick={() => { if (pasteText.trim()) { setShowTryOwn(false); setTryOwnMode(null); setIsUserUpload(true); extractOrder(pasteText, "Pasted text"); } }}
                         disabled={!pasteText.trim()}
                         style={{ ...btnBase, width: "100%", padding: 14, borderRadius: T.radius, background: pasteText.trim() ? T.accent : "#E7E5E4", color: pasteText.trim() ? "#fff" : T.textTertiary, fontWeight: 700, fontSize: 14, cursor: pasteText.trim() ? "pointer" : "not-allowed" }}
-                      >Extract & Match to Catalog →</button>
+                      >Prepare ERP Draft →</button>
                     </div>
                   )}
 
@@ -2113,7 +2143,7 @@ export default function FloraDemo() {
                             style={{ ...btnBase, width: "100%", padding: 14, borderRadius: T.radius, background: T.accent, color: "#fff", fontWeight: 700, fontSize: 14 }}
                             onMouseEnter={e => { e.target.style.background = T.accentDark; }}
                             onMouseLeave={e => { e.target.style.background = T.accent; }}
-                          >Extract & Match to Catalog →</button>
+                          >Prepare ERP Draft →</button>
                         </div>
                       )}
                     </div>
@@ -2487,7 +2517,7 @@ export default function FloraDemo() {
                         <textarea
                           value={pasteText}
                           onChange={e => setPasteText(e.target.value)}
-                          placeholder="Paste your order text here..."
+                          placeholder={PASTE_PLACEHOLDER}
                           style={{ width: "100%", minHeight: 100, padding: 12, borderRadius: T.radius, border: `1px solid #BFDBFE`, background: "#fff", fontFamily: T.fontMono, fontSize: 12, resize: "vertical", outline: "none", boxSizing: "border-box" }}
                           onFocus={e => e.target.style.borderColor = T.accent}
                           onBlur={e => e.target.style.borderColor = "#BFDBFE"}
@@ -2495,7 +2525,7 @@ export default function FloraDemo() {
                         <button onClick={() => { if (pasteText.trim()) { setShowBottomTryOwn(false); setBottomTryOwnMode(null); setIsUserUpload(true); extractOrder(pasteText, "Pasted text"); } }}
                           disabled={!pasteText.trim()}
                           style={{ ...btnBase, width: "100%", marginTop: 8, padding: 12, borderRadius: T.radius, background: pasteText.trim() ? T.accent : "#CBD5E1", color: "#fff", fontWeight: 700, fontSize: 13, cursor: pasteText.trim() ? "pointer" : "not-allowed" }}
-                        >Extract & Match to Catalog →</button>
+                        >Prepare ERP Draft →</button>
                       </div>
                     ) : (
                       <div>
@@ -2511,7 +2541,7 @@ export default function FloraDemo() {
                         {uploadedText && (
                           <button onClick={() => { if (uploadedText.trim()) { setShowBottomTryOwn(false); setBottomTryOwnMode(null); setIsUserUpload(true); extractOrder(uploadedFileData ? "" : uploadedText, uploadedFileName, null, uploadedFileData); } }}
                             style={{ ...btnBase, width: "100%", marginTop: 8, padding: 12, borderRadius: T.radius, background: T.accent, color: "#fff", fontWeight: 700, fontSize: 13 }}
-                          >Extract & Match to Catalog →</button>
+                          >Prepare ERP Draft →</button>
                         )}
                       </div>
                     )}
