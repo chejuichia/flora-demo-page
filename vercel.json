@@ -1,12 +1,5 @@
 {
-  "builds": [
-    { "src": "package.json", "use": "@vercel/static-build", "config": { "distDir": "dist" } },
-    { "src": "api/anthropic.js", "use": "@vercel/node" }
-  ],
-  "routes": [
-    { "src": "/api/anthropic", "dest": "/api/anthropic.js" },
-    { "src": "/assets/(.*)", "dest": "/assets/$1" },
-    { "src": "/samples/(.*)", "dest": "/samples/$1" },
-    { "src": "/(.*)", "dest": "/index.html" }
+  "rewrites": [
+    { "source": "/((?!api|assets|samples).*)", "destination": "/index.html" }
   ]
 }
