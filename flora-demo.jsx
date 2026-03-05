@@ -1516,6 +1516,8 @@ function ResultsView({ data, onHighlight }) {
 export default function FloraDemo() {
   const [activeTab, setActiveTab] = useState("samples");
   const [hoveredSample, setHoveredSample] = useState(null);
+  const [showTryOwn, setShowTryOwn] = useState(false);
+  const [tryOwnMode, setTryOwnMode] = useState(null); // "paste" | "upload"
   const [pasteText, setPasteText] = useState("");
   const [uploadedText, setUploadedText] = useState("");
   const [uploadedFileName, setUploadedFileName] = useState("");
@@ -1606,6 +1608,8 @@ export default function FloraDemo() {
     setPasteText("");
     setUploadedText("");
     setUploadedFileName("");
+    setShowTryOwn(false);
+    setTryOwnMode(null);
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
@@ -1668,7 +1672,7 @@ export default function FloraDemo() {
         }}
           onMouseEnter={e => { e.target.style.background = T.accentDark; }}
           onMouseLeave={e => { e.target.style.background = T.accent; }}
-        >Start Free Trial</button>
+        >Get Started</button>
       </header>
 
       {/* ── Main ── */}
@@ -1708,8 +1712,9 @@ export default function FloraDemo() {
           )}
 
           {result && (
+            <>
             <div className="flora-split-panel" style={{
-              maxWidth: 1400, margin: "0 auto", padding: "16px 24px 80px",
+              maxWidth: 1400, margin: "0 auto", padding: "16px 24px 40px",
               display: "grid",
               gridTemplateColumns: "minmax(0, 2fr) minmax(0, 3fr)",
               gap: 24,
@@ -1779,6 +1784,157 @@ export default function FloraDemo() {
                 <ResultsView data={result} onHighlight={setHighlightTerms} />
               </div>
             </div>
+
+            {/* ── Try Flora AI with Your Order CTA ── */}
+            <div style={{
+              maxWidth: 720, margin: "0 auto", padding: "0 24px 80px",
+              animation: "offade 0.4s ease",
+            }}>
+              {!showTryOwn ? (
+                <button onClick={() => setShowTryOwn(true)} style={{
+                  ...btnBase, width: "100%", padding: "20px 24px",
+                  borderRadius: T.radiusLg, background: T.accentLight,
+                  border: `1px solid #BFDBFE`,
+                  display: "flex", alignItems: "center", justifyContent: "center", gap: 12,
+                  transition: "all 0.2s ease",
+                }}
+                  onMouseEnter={e => { e.currentTarget.style.background = "#DBEAFE"; e.currentTarget.style.borderColor = T.accent; }}
+                  onMouseLeave={e => { e.currentTarget.style.background = T.accentLight; e.currentTarget.style.borderColor = "#BFDBFE"; }}
+                >
+                  <span style={{ fontSize: 20 }}>&#9889;</span>
+                  <div style={{ textAlign: "left" }}>
+                    <div style={{ fontWeight: 700, fontSize: 15, color: T.accent }}>Try Flora AI with Your Order</div>
+                    <div style={{ fontSize: 12, color: T.textSecondary, marginTop: 2 }}>Paste your own PO text or upload a file to see it processed</div>
+                  </div>
+                  <span style={{ fontSize: 18, color: T.accent, marginLeft: "auto" }}>→</span>
+                </button>
+              ) : (
+                <div style={{
+                  borderRadius: T.radiusLg, background: T.surface,
+                  border: `1px solid ${T.border}`, overflow: "hidden",
+                  animation: "offade 0.2s ease",
+                }}>
+                  {/* Header */}
+                  <div style={{
+                    padding: "16px 20px", borderBottom: `1px solid ${T.borderLight}`,
+                    display: "flex", alignItems: "center", justifyContent: "space-between",
+                  }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <span style={{ fontSize: 16 }}>&#9889;</span>
+                      <span style={{ fontWeight: 700, fontSize: 14, color: T.text }}>Try Flora AI with Your Order</span>
+                    </div>
+                    <button onClick={() => { setShowTryOwn(false); setTryOwnMode(null); }} style={{
+                      ...btnBase, padding: "4px 10px", borderRadius: T.radiusSm,
+                      background: T.surfaceHover, color: T.textTertiary, fontSize: 12, fontWeight: 600,
+                    }}>Close</button>
+                  </div>
+
+                  {/* Mode selection */}
+                  {!tryOwnMode && (
+                    <div style={{ padding: 20, display: "flex", gap: 12 }}>
+                      <button onClick={() => setTryOwnMode("paste")} style={{
+                        ...btnBase, flex: 1, padding: "24px 16px", borderRadius: T.radius,
+                        border: `1px solid ${T.border}`, background: T.bg,
+                        display: "flex", flexDirection: "column", alignItems: "center", gap: 8,
+                        transition: "all 0.15s ease",
+                      }}
+                        onMouseEnter={e => { e.currentTarget.style.borderColor = T.accent; e.currentTarget.style.background = T.accentLight; }}
+                        onMouseLeave={e => { e.currentTarget.style.borderColor = T.border; e.currentTarget.style.background = T.bg; }}
+                      >
+                        <span style={{ fontSize: 24 }}>&#9999;&#65039;</span>
+                        <span style={{ fontWeight: 700, fontSize: 13, color: T.text }}>Paste Text</span>
+                        <span style={{ fontSize: 11, color: T.textTertiary, lineHeight: 1.4, textAlign: "center" }}>Paste an email, chat, or PO text</span>
+                      </button>
+                      <button onClick={() => setTryOwnMode("upload")} style={{
+                        ...btnBase, flex: 1, padding: "24px 16px", borderRadius: T.radius,
+                        border: `1px solid ${T.border}`, background: T.bg,
+                        display: "flex", flexDirection: "column", alignItems: "center", gap: 8,
+                        transition: "all 0.15s ease",
+                      }}
+                        onMouseEnter={e => { e.currentTarget.style.borderColor = T.accent; e.currentTarget.style.background = T.accentLight; }}
+                        onMouseLeave={e => { e.currentTarget.style.borderColor = T.border; e.currentTarget.style.background = T.bg; }}
+                      >
+                        <span style={{ fontSize: 24 }}>&#128193;</span>
+                        <span style={{ fontWeight: 700, fontSize: 13, color: T.text }}>Upload File</span>
+                        <span style={{ fontSize: 11, color: T.textTertiary, lineHeight: 1.4, textAlign: "center" }}>TXT, CSV, Excel, PDF, or image</span>
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Paste mode */}
+                  {tryOwnMode === "paste" && (
+                    <div style={{ padding: 20 }}>
+                      <button onClick={() => setTryOwnMode(null)} style={{
+                        ...btnBase, padding: "4px 0", marginBottom: 12,
+                        background: "none", color: T.textTertiary, fontSize: 12, fontWeight: 600,
+                      }}>← Back</button>
+                      <textarea value={pasteText} onChange={e => setPasteText(e.target.value)}
+                        placeholder={"Paste an order email, chat message, or any unstructured text…\n\nExample: \"Hey, need 50 units of Widget A and 30 of Widget B to 123 Main St by Friday. PO# 12345.\""}
+                        style={{
+                          width: "100%", minHeight: 180, padding: 16,
+                          borderRadius: T.radius, border: `1px solid ${T.border}`,
+                          background: T.bg, color: T.text,
+                          fontFamily: T.fontMono, fontSize: 13, lineHeight: 1.7,
+                          resize: "vertical", marginBottom: 12,
+                        }}
+                        onFocus={e => e.target.style.borderColor = T.accent}
+                        onBlur={e => e.target.style.borderColor = T.border}
+                      />
+                      <button onClick={() => { if (pasteText.trim()) { setShowTryOwn(false); setTryOwnMode(null); extractOrder(pasteText, "Pasted text"); } }}
+                        disabled={!pasteText.trim()}
+                        style={{ ...btnBase, width: "100%", padding: 14, borderRadius: T.radius, background: pasteText.trim() ? T.accent : "#E7E5E4", color: pasteText.trim() ? "#fff" : T.textTertiary, fontWeight: 700, fontSize: 14, cursor: pasteText.trim() ? "pointer" : "not-allowed" }}
+                      >Extract & Match to Catalog →</button>
+                    </div>
+                  )}
+
+                  {/* Upload mode */}
+                  {tryOwnMode === "upload" && (
+                    <div style={{ padding: 20 }}>
+                      <button onClick={() => setTryOwnMode(null)} style={{
+                        ...btnBase, padding: "4px 0", marginBottom: 12,
+                        background: "none", color: T.textTertiary, fontSize: 12, fontWeight: 600,
+                      }}>← Back</button>
+                      <div onClick={() => fileInputRef.current?.click()}
+                        onDragOver={e => { e.preventDefault(); e.currentTarget.style.borderColor = T.accent; }}
+                        onDragLeave={e => { e.currentTarget.style.borderColor = T.border; }}
+                        onDrop={e => {
+                          e.preventDefault(); e.currentTarget.style.borderColor = T.border;
+                          const f = e.dataTransfer.files?.[0];
+                          if (f && fileInputRef.current) { const dt = new DataTransfer(); dt.items.add(f); fileInputRef.current.files = dt.files; handleFileUpload({ target: fileInputRef.current }); }
+                        }}
+                        style={{
+                          padding: "36px 24px", borderRadius: T.radius,
+                          border: `2px dashed ${T.border}`, background: T.bg,
+                          cursor: "pointer", textAlign: "center", marginBottom: 12,
+                        }}
+                      >
+                        <input ref={fileInputRef} type="file" accept=".txt,.csv,.json,.xlsx,.xls,.pdf,.png,.jpg,.jpeg" onChange={handleFileUpload} style={{ display: "none" }} />
+                        <div style={{ fontSize: 32, marginBottom: 8 }}>&#128194;</div>
+                        <div style={{ fontWeight: 600, fontSize: 13, color: T.text, marginBottom: 4 }}>
+                          {uploadedFileName || "Drop a file here, or click to browse"}
+                        </div>
+                        <div style={{ fontSize: 12, color: T.textTertiary }}>TXT, CSV, Excel, PDF, and image files</div>
+                      </div>
+                      {uploadedText && (
+                        <div style={{ animation: "offade 0.2s ease" }}>
+                          <div style={{ background: T.bg, borderRadius: T.radius, border: `1px solid ${T.border}`, maxHeight: 160, overflow: "auto", marginBottom: 12 }}>
+                            <pre style={{ padding: 14, fontFamily: T.fontMono, fontSize: 12, color: T.textSecondary, lineHeight: 1.6, whiteSpace: "pre-wrap" }}>
+                              {uploadedText.slice(0, 2000)}{uploadedText.length > 2000 && "\n… (truncated)"}
+                            </pre>
+                          </div>
+                          <button onClick={() => { if (uploadedText.trim()) { setShowTryOwn(false); setTryOwnMode(null); extractOrder(uploadedText, uploadedFileName); } }}
+                            style={{ ...btnBase, width: "100%", padding: 14, borderRadius: T.radius, background: T.accent, color: "#fff", fontWeight: 700, fontSize: 14 }}
+                            onMouseEnter={e => { e.target.style.background = T.accentDark; }}
+                            onMouseLeave={e => { e.target.style.background = T.accent; }}
+                          >Extract & Match to Catalog →</button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+            </>
           )}
         </div>
       ) : (
@@ -1807,139 +1963,70 @@ export default function FloraDemo() {
               </p>
             </div>
 
-            {/* Tabs */}
-            <div style={{
-              display: "flex", gap: 2, background: T.surface,
-              borderRadius: T.radius, padding: 3,
-              border: `1px solid ${T.border}`, marginBottom: 20,
-            }}>
-              {tabs.map(tab => (
-                <button key={tab.id} onClick={() => setActiveTab(tab.id)} style={{
-                  ...btnBase, flex: 1, padding: "11px 16px", borderRadius: 8,
-                  background: activeTab === tab.id ? T.accentLight : "transparent",
-                  color: activeTab === tab.id ? T.accent : T.textTertiary,
-                  fontWeight: 600, fontSize: 13,
-                  display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
-                  border: activeTab === tab.id ? `1px solid #BFDBFE` : "1px solid transparent",
-                }}>
-                  <span style={{ fontSize: 14 }}>{tab.icon}</span> {tab.label}
-                </button>
-              ))}
+            {/* Bridge text */}
+            <div style={{ textAlign: "center", marginBottom: 24 }}>
+              <p style={{
+                fontSize: 14, color: T.textSecondary, fontWeight: 600,
+                display: "inline-flex", alignItems: "center", gap: 8,
+              }}>
+                <span style={{ color: T.accent, fontSize: 16 }}>&#8595;</span>
+                Pick any order below to see Flora process it in real time
+                <span style={{ color: T.accent, fontSize: 16 }}>&#8595;</span>
+              </p>
             </div>
 
-            {/* Tab Content */}
-            <div style={{ animation: "offade 0.2s ease" }}>
-
-              {/* Samples */}
-              {activeTab === "samples" && (
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(165px, 1fr))", gap: 10, marginBottom: 20 }}>
-                  {SAMPLE_ORDERS.map(s => (
-                    <button key={s.id}
-                      onClick={() => extractOrder(s.content, s.label, s.image)}
-                      onMouseEnter={() => setHoveredSample(s.id)}
-                      onMouseLeave={() => setHoveredSample(null)}
-                      style={{
-                        ...btnBase, padding: 0, borderRadius: T.radius, textAlign: "left",
-                        border: `1px solid ${hoveredSample === s.id ? T.accent : T.border}`,
-                        background: T.surface,
-                        display: "flex", flexDirection: "column", overflow: "hidden",
-                        position: "relative", transition: "border-color 0.15s ease, box-shadow 0.15s ease",
-                        boxShadow: hoveredSample === s.id ? `0 2px 8px ${T.accent}20` : "none",
-                      }}>
-                      {s.image ? (
-                        <div style={{ width: "100%", height: 100, overflow: "hidden", borderBottom: `1px solid ${T.borderLight}`, background: "#F5F5F4" }}>
-                          <img src={s.image} alt={s.label} style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "top", opacity: 0.85 }} />
-                        </div>
-                      ) : (
-                        <div style={{ padding: "14px 14px 0" }}>
-                          <span style={{ fontSize: 22 }}>{s.icon}</span>
-                        </div>
-                      )}
-                      <div style={{ padding: s.image ? "10px 14px 14px" : "8px 14px 14px", display: "flex", flexDirection: "column", gap: 4 }}>
-                        <span style={{ fontWeight: 700, fontSize: 13, color: T.text }}>{s.label}</span>
-                        <span style={{ fontSize: 12, color: T.textTertiary, lineHeight: 1.4 }}>{s.description}</span>
-                      </div>
-                      {/* Hover overlay */}
-                      {hoveredSample === s.id && (
-                        <div style={{
-                          position: "absolute", inset: 0, borderRadius: T.radius,
-                          background: "rgba(30, 58, 138, 0.75)",
-                          display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
-                          gap: 8, padding: 16, animation: "offade 0.15s ease",
-                        }}>
-                          <span style={{ fontSize: 24, lineHeight: 1 }}>▶</span>
-                          <span style={{ color: "#fff", fontSize: 12, fontWeight: 600, textAlign: "center", lineHeight: 1.4 }}>
-                            See AI prepare the<br />ERP draft
-                          </span>
-                        </div>
-                      )}
-                    </button>
-                  ))}
-                </div>
-              )}
-
-              {/* Paste */}
-              {activeTab === "paste" && (
-                <div>
-                  <textarea value={pasteText} onChange={e => setPasteText(e.target.value)}
-                    placeholder={"Paste an order email, chat message, or any unstructured text…\n\nExample: \"Hey, need 50 units of Widget A and 30 of Widget B to 123 Main St by Friday. PO# 12345.\""}
-                    style={{
-                      width: "100%", minHeight: 220, padding: 20,
-                      borderRadius: T.radius, border: `1px solid ${T.border}`,
-                      background: T.surface, color: T.text,
-                      fontFamily: T.fontMono, fontSize: 13, lineHeight: 1.7,
-                      resize: "vertical", marginBottom: 14,
-                    }}
-                    onFocus={e => e.target.style.borderColor = T.accent}
-                    onBlur={e => e.target.style.borderColor = T.border}
-                  />
-                  <button onClick={() => { if (pasteText.trim()) extractOrder(pasteText, "Pasted text"); }}
-                    disabled={!pasteText.trim()}
-                    style={{ ...btnBase, width: "100%", padding: 16, borderRadius: T.radius, background: pasteText.trim() ? T.accent : "#E7E5E4", color: pasteText.trim() ? "#fff" : T.textTertiary, fontWeight: 700, fontSize: 14, cursor: pasteText.trim() ? "pointer" : "not-allowed" }}
-                  >Extract & Match to Catalog →</button>
-                </div>
-              )}
-
-              {/* Upload */}
-              {activeTab === "upload" && (
-                <div>
-                  <div onClick={() => fileInputRef.current?.click()}
-                    onDragOver={e => { e.preventDefault(); e.currentTarget.style.borderColor = T.accent; }}
-                    onDragLeave={e => { e.currentTarget.style.borderColor = T.border; }}
-                    onDrop={e => {
-                      e.preventDefault(); e.currentTarget.style.borderColor = T.border;
-                      const f = e.dataTransfer.files?.[0];
-                      if (f && fileInputRef.current) { const dt = new DataTransfer(); dt.items.add(f); fileInputRef.current.files = dt.files; handleFileUpload({ target: fileInputRef.current }); }
-                    }}
-                    style={{
-                      padding: "48px 24px", borderRadius: T.radius,
-                      border: `2px dashed ${T.border}`, background: T.surface,
-                      cursor: "pointer", textAlign: "center", marginBottom: 14,
-                    }}
-                  >
-                    <input ref={fileInputRef} type="file" accept=".txt,.csv,.json,.xlsx,.xls,.pdf,.png,.jpg,.jpeg" onChange={handleFileUpload} style={{ display: "none" }} />
-                    <div style={{ fontSize: 36, marginBottom: 10 }}>📂</div>
-                    <div style={{ fontWeight: 600, fontSize: 14, color: T.text, marginBottom: 4 }}>
-                      {uploadedFileName || "Drop a file here, or click to browse"}
+            {/* Sample Order Cards */}
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(165px, 1fr))", gap: 12 }}>
+              {SAMPLE_ORDERS.map(s => (
+                <button key={s.id}
+                  onClick={() => extractOrder(s.content, s.label, s.image)}
+                  onMouseEnter={() => setHoveredSample(s.id)}
+                  onMouseLeave={() => setHoveredSample(null)}
+                  style={{
+                    ...btnBase, padding: 0, borderRadius: T.radius, textAlign: "left",
+                    border: `1px solid ${hoveredSample === s.id ? T.accent : T.border}`,
+                    background: T.surface,
+                    display: "flex", flexDirection: "column", overflow: "hidden",
+                    position: "relative", transition: "border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease",
+                    boxShadow: hoveredSample === s.id ? `0 4px 12px ${T.accent}25` : `0 1px 3px rgba(0,0,0,0.04)`,
+                    transform: hoveredSample === s.id ? "translateY(-2px)" : "none",
+                  }}>
+                  {s.image ? (
+                    <div style={{ width: "100%", height: 100, overflow: "hidden", borderBottom: `1px solid ${T.borderLight}`, background: "#F5F5F4" }}>
+                      <img src={s.image} alt={s.label} style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "top", opacity: 0.85 }} />
                     </div>
-                    <div style={{ fontSize: 13, color: T.textTertiary }}>TXT, CSV, Excel, PDF, and image files</div>
-                  </div>
-                  {uploadedText && (
-                    <div style={{ animation: "offade 0.2s ease" }}>
-                      <div style={{ background: T.surface, borderRadius: T.radius, border: `1px solid ${T.border}`, maxHeight: 180, overflow: "auto", marginBottom: 14 }}>
-                        <pre style={{ padding: 16, fontFamily: T.fontMono, fontSize: 12, color: T.textSecondary, lineHeight: 1.6, whiteSpace: "pre-wrap" }}>
-                          {uploadedText.slice(0, 2000)}{uploadedText.length > 2000 && "\n… (truncated)"}
-                        </pre>
-                      </div>
-                      <button onClick={() => { if (uploadedText.trim()) extractOrder(uploadedText, uploadedFileName); }}
-                        style={{ ...btnBase, width: "100%", padding: 16, borderRadius: T.radius, background: T.accent, color: "#fff", fontWeight: 700, fontSize: 14 }}
-                        onMouseEnter={e => { e.target.style.background = T.accentDark; }}
-                        onMouseLeave={e => { e.target.style.background = T.accent; }}
-                      >Extract & Match to Catalog →</button>
+                  ) : (
+                    <div style={{ padding: "14px 14px 0" }}>
+                      <span style={{ fontSize: 22 }}>{s.icon}</span>
                     </div>
                   )}
-                </div>
-              )}
+                  <div style={{ padding: s.image ? "10px 14px 6px" : "8px 14px 6px", display: "flex", flexDirection: "column", gap: 3 }}>
+                    <span style={{ fontWeight: 700, fontSize: 13, color: T.text }}>{s.label}</span>
+                    <span style={{ fontSize: 11, color: T.textTertiary, lineHeight: 1.4 }}>{s.description}</span>
+                  </div>
+                  {/* Persistent action label */}
+                  <div style={{
+                    padding: "8px 14px 12px",
+                    marginTop: "auto",
+                    display: "flex", alignItems: "center", gap: 5,
+                  }}>
+                    <span style={{
+                      fontSize: 11, fontWeight: 600,
+                      color: hoveredSample === s.id ? T.accent : T.textTertiary,
+                      transition: "color 0.15s ease",
+                    }}>
+                      Process this order
+                    </span>
+                    <span style={{
+                      fontSize: 12,
+                      color: hoveredSample === s.id ? T.accent : T.textTertiary,
+                      transition: "color 0.15s ease, transform 0.15s ease",
+                      transform: hoveredSample === s.id ? "translateX(2px)" : "none",
+                      display: "inline-block",
+                    }}>→</span>
+                  </div>
+                </button>
+              ))}
             </div>
 
             {/* Stats */}
