@@ -2170,7 +2170,7 @@ export default function FloraDemo() {
             <div style={{ marginTop: 56 }}>
               <div style={{ textAlign: "center", marginBottom: 32 }}>
                 <h2 style={{ fontSize: 22, fontWeight: 700, color: T.text, letterSpacing: "-0.3px", marginBottom: 8 }}>
-                  Features
+                  Explore what's possible with Flora
                 </h2>
                 <p style={{ fontSize: 14, color: T.textSecondary, maxWidth: 480, margin: "0 auto", lineHeight: 1.6 }}>
                   What Flora does with every order
