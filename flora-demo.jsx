@@ -1576,6 +1576,8 @@ export default function FloraDemo() {
   const [uploadedFileName, setUploadedFileName] = useState("");
   const [uploadedFileData, setUploadedFileData] = useState(null); // { base64, mediaType }
   const [isUserUpload, setIsUserUpload] = useState(false);
+  const [showBottomTryOwn, setShowBottomTryOwn] = useState(false);
+  const [bottomTryOwnMode, setBottomTryOwnMode] = useState(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
@@ -2430,22 +2432,91 @@ export default function FloraDemo() {
                 onMouseLeave={e => { e.target.style.background = T.accent; e.target.style.boxShadow = `0 1px 3px ${T.accent}40`; }}
               >Get Started with Flora →</button>
               <div style={{ marginTop: 16, paddingTop: 16, borderTop: "1px solid #BFDBFE" }}>
-                <button onClick={() => {
-                  setShowTryOwn(true);
-                  document.getElementById("try-flora")?.scrollIntoView({ behavior: "smooth", block: "start" });
-                }} style={{
-                  ...btnBase, display: "flex", alignItems: "center", gap: 8,
-                  padding: "10px 16px", borderRadius: T.radius,
-                  background: "rgba(255,255,255,0.6)", border: `1px solid #BFDBFE`,
-                  fontSize: 13, fontWeight: 600, color: T.accent,
-                  transition: "all 0.15s ease",
-                }}
-                  onMouseEnter={e => { e.currentTarget.style.background = "#fff"; e.currentTarget.style.borderColor = T.accent; }}
-                  onMouseLeave={e => { e.currentTarget.style.background = "rgba(255,255,255,0.6)"; e.currentTarget.style.borderColor = "#BFDBFE"; }}
-                >
-                  <span style={{ fontSize: 14 }}>&#9889;</span>
-                  Or try Flora with your own order →
-                </button>
+                {!showBottomTryOwn ? (
+                  <button onClick={() => setShowBottomTryOwn(true)} style={{
+                    ...btnBase, display: "flex", alignItems: "center", gap: 8,
+                    padding: "10px 16px", borderRadius: T.radius,
+                    background: "rgba(255,255,255,0.6)", border: `1px solid #BFDBFE`,
+                    fontSize: 13, fontWeight: 600, color: T.accent,
+                    transition: "all 0.15s ease",
+                  }}
+                    onMouseEnter={e => { e.currentTarget.style.background = "#fff"; e.currentTarget.style.borderColor = T.accent; }}
+                    onMouseLeave={e => { e.currentTarget.style.background = "rgba(255,255,255,0.6)"; e.currentTarget.style.borderColor = "#BFDBFE"; }}
+                  >
+                    <span style={{ fontSize: 14 }}>&#9889;</span>
+                    Or try Flora with your own order →
+                  </button>
+                ) : (
+                  <div style={{ animation: "offade 0.2s ease" }}>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+                      <span style={{ fontSize: 13, fontWeight: 600, color: T.text }}>&#9889; Try with your own order</span>
+                      <button onClick={() => { setShowBottomTryOwn(false); setBottomTryOwnMode(null); }} style={{
+                        ...btnBase, padding: "2px 8px", borderRadius: T.radiusSm,
+                        background: "rgba(255,255,255,0.6)", color: T.textTertiary, fontSize: 11, fontWeight: 600,
+                      }}>Close</button>
+                    </div>
+                    {!bottomTryOwnMode ? (
+                      <div style={{ display: "flex", gap: 10 }}>
+                        <button onClick={() => setBottomTryOwnMode("paste")} style={{
+                          ...btnBase, flex: 1, padding: "16px 12px", borderRadius: T.radius,
+                          border: `1px solid #BFDBFE`, background: "rgba(255,255,255,0.6)",
+                          display: "flex", flexDirection: "column", alignItems: "center", gap: 6,
+                          transition: "all 0.15s ease",
+                        }}
+                          onMouseEnter={e => { e.currentTarget.style.background = "#fff"; e.currentTarget.style.borderColor = T.accent; }}
+                          onMouseLeave={e => { e.currentTarget.style.background = "rgba(255,255,255,0.6)"; e.currentTarget.style.borderColor = "#BFDBFE"; }}
+                        >
+                          <span style={{ fontSize: 20 }}>&#9999;&#65039;</span>
+                          <span style={{ fontWeight: 700, fontSize: 12, color: T.text }}>Paste Text</span>
+                        </button>
+                        <button onClick={() => setBottomTryOwnMode("upload")} style={{
+                          ...btnBase, flex: 1, padding: "16px 12px", borderRadius: T.radius,
+                          border: `1px solid #BFDBFE`, background: "rgba(255,255,255,0.6)",
+                          display: "flex", flexDirection: "column", alignItems: "center", gap: 6,
+                          transition: "all 0.15s ease",
+                        }}
+                          onMouseEnter={e => { e.currentTarget.style.background = "#fff"; e.currentTarget.style.borderColor = T.accent; }}
+                          onMouseLeave={e => { e.currentTarget.style.background = "rgba(255,255,255,0.6)"; e.currentTarget.style.borderColor = "#BFDBFE"; }}
+                        >
+                          <span style={{ fontSize: 20 }}>&#128193;</span>
+                          <span style={{ fontWeight: 700, fontSize: 12, color: T.text }}>Upload File</span>
+                        </button>
+                      </div>
+                    ) : bottomTryOwnMode === "paste" ? (
+                      <div>
+                        <textarea
+                          value={pasteText}
+                          onChange={e => setPasteText(e.target.value)}
+                          placeholder="Paste your order text here..."
+                          style={{ width: "100%", minHeight: 100, padding: 12, borderRadius: T.radius, border: `1px solid #BFDBFE`, background: "#fff", fontFamily: T.fontMono, fontSize: 12, resize: "vertical", outline: "none", boxSizing: "border-box" }}
+                          onFocus={e => e.target.style.borderColor = T.accent}
+                          onBlur={e => e.target.style.borderColor = "#BFDBFE"}
+                        />
+                        <button onClick={() => { if (pasteText.trim()) { setShowBottomTryOwn(false); setBottomTryOwnMode(null); setIsUserUpload(true); extractOrder(pasteText, "Pasted text"); } }}
+                          disabled={!pasteText.trim()}
+                          style={{ ...btnBase, width: "100%", marginTop: 8, padding: 12, borderRadius: T.radius, background: pasteText.trim() ? T.accent : "#CBD5E1", color: "#fff", fontWeight: 700, fontSize: 13, cursor: pasteText.trim() ? "pointer" : "not-allowed" }}
+                        >Extract & Match to Catalog →</button>
+                      </div>
+                    ) : (
+                      <div>
+                        <label style={{
+                          display: "flex", flexDirection: "column", alignItems: "center", gap: 8, padding: 20,
+                          borderRadius: T.radius, border: `2px dashed #BFDBFE`, background: "#fff",
+                          cursor: "pointer", transition: "all 0.15s ease",
+                        }}>
+                          <span style={{ fontSize: 24 }}>&#128193;</span>
+                          <span style={{ fontSize: 12, color: T.textSecondary }}>{uploadedFileName || "Drop a file here, or click to browse"}</span>
+                          <input type="file" accept=".txt,.csv,.xlsx,.xls,.pdf,.png,.jpg,.jpeg,.webp" style={{ display: "none" }} ref={fileInputRef} onChange={handleFileUpload} />
+                        </label>
+                        {uploadedText && (
+                          <button onClick={() => { if (uploadedText.trim()) { setShowBottomTryOwn(false); setBottomTryOwnMode(null); setIsUserUpload(true); extractOrder(uploadedFileData ? "" : uploadedText, uploadedFileName, null, uploadedFileData); } }}
+                            style={{ ...btnBase, width: "100%", marginTop: 8, padding: 12, borderRadius: T.radius, background: T.accent, color: "#fff", fontWeight: 700, fontSize: 13 }}
+                          >Extract & Match to Catalog →</button>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
         </main>
