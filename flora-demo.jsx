@@ -1656,7 +1656,6 @@ export default function FloraDemo() {
     setProcessingImage(null);
     setRawInputText("");
     setHighlightTerms([]);
-    setSelectedSample(null);
     setPasteText("");
     setUploadedText("");
     setUploadedFileName("");
