@@ -2081,40 +2081,35 @@ export default function FloraDemo() {
         {/* Full-width Hero with background image */}
         <section style={{
           width: "100%",
-          minHeight: 380,
+          minHeight: 340,
           backgroundImage: "url('/hero-bg.jpg')",
           backgroundSize: "cover",
           backgroundPosition: "center top",
           backgroundRepeat: "no-repeat",
           display: "flex",
           alignItems: "center",
-          justifyContent: "center",
           position: "relative",
         }}>
           <div style={{
-            textAlign: "center",
+            textAlign: "left",
             maxWidth: 920,
+            margin: "0 auto",
+            width: "100%",
             padding: "80px 20px 60px",
             position: "relative",
             zIndex: 1,
           }}>
-            <div style={{
-              display: "inline-flex", alignItems: "center", gap: 6,
-              padding: "4px 14px", borderRadius: 999,
-              background: "rgba(255,255,255,0.85)", border: `1px solid #BFDBFE`,
-              fontFamily: T.fontMono, fontSize: 11, fontWeight: 600,
-              color: T.accent, letterSpacing: "0.5px", marginBottom: 20,
-              backdropFilter: "blur(4px)",
+            <p style={{
+              fontSize: 14, fontWeight: 600, color: T.accent,
+              letterSpacing: "0.3px", marginBottom: 12,
             }}>
-              <span style={{ width: 6, height: 6, borderRadius: "50%", background: T.green, animation: "ofpulse 2s ease-in-out infinite" }} />
-              LIVE DEMO
-            </div>
-            <h1 style={{ fontSize: "clamp(28px, 4.5vw, 44px)", fontWeight: 700, lineHeight: 1.15, letterSpacing: "-0.8px", marginBottom: 14, color: T.text }}>
-              Your team re-keys orders<br />
-              <span style={{ color: T.accent }}>40 hours a week.</span>
+              Flora Order Intelligence
+            </p>
+            <h1 style={{ fontSize: "clamp(28px, 4.5vw, 44px)", fontWeight: 700, lineHeight: 1.15, letterSpacing: "-0.8px", marginBottom: 16, color: T.text, maxWidth: 600 }}>
+              Eliminate manual order entry with AI-powered automation
             </h1>
-            <p style={{ fontSize: 16, color: T.textSecondary, maxWidth: 540, margin: "0 auto", lineHeight: 1.65 }}>
-              Manual order entry burns labor, delays fulfillment, and lets errors slip through to the warehouse floor. Flora AI reads every order from every channel and delivers a verified sales order — ready to book in your ERP.
+            <p style={{ fontSize: 16, color: T.textSecondary, maxWidth: 520, lineHeight: 1.65 }}>
+              Flora reads orders from any channel and format, matches items to your catalog, and delivers verified, ERP-ready sales orders — without the re-keying.
             </p>
           </div>
         </section>
