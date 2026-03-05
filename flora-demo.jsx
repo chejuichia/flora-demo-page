@@ -1492,18 +1492,21 @@ function ResultsView({ data, onHighlight }) {
         <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 3, background: `linear-gradient(90deg, ${T.accent}, ${T.accentDark})` }} />
         <div style={{ textAlign: "center", maxWidth: 540, margin: "0 auto" }}>
           <div style={{ fontSize: 20, fontWeight: 700, color: T.text, marginBottom: 8 }}>
-            See what happens when this runs on autopilot
+            Now imagine this on every order, every day
           </div>
           <div style={{ fontSize: 14, color: T.textSecondary, lineHeight: 1.7, marginBottom: 24 }}>
-            You just saw extraction, catalog matching, and smart validation. Flora also learns your customers' ordering patterns, auto-resolves ambiguities from order history, and drafts directly into your ERP — with every incomplete field flagged, never assumed.
+            You just saw extraction, catalog matching, and smart validation on a single order. In production, Flora processes hundreds per day — learning your customers' patterns, auto-resolving ambiguities, and drafting directly into your ERP.
           </div>
           <button
             style={{ padding: "14px 40px", borderRadius: T.radius, background: T.accent, color: "#fff", fontWeight: 700, fontSize: 14, border: "none", cursor: "pointer", boxShadow: `0 1px 3px ${T.accent}40`, transition: "all 0.15s ease", fontFamily: T.font }}
             onMouseEnter={e => { e.target.style.background = T.accentDark; e.target.style.boxShadow = `0 4px 12px ${T.accent}30`; }}
             onMouseLeave={e => { e.target.style.background = T.accent; e.target.style.boxShadow = `0 1px 3px ${T.accent}40`; }}
           >
-            Start 14-Day Free Trial →
+            Book a Demo with Your Team →
           </button>
+          <p style={{ fontSize: 12, color: T.textTertiary, marginTop: 12 }}>
+            30-minute walkthrough. Bring your ops team. We'll use your real orders.
+          </p>
         </div>
       </div>
     </div>
@@ -1672,7 +1675,7 @@ export default function FloraDemo() {
         }}
           onMouseEnter={e => { e.target.style.background = T.accentDark; }}
           onMouseLeave={e => { e.target.style.background = T.accent; }}
-        >Get Started</button>
+        >Get Started with Flora</button>
       </header>
 
       {/* ── Main ── */}
@@ -1955,11 +1958,11 @@ export default function FloraDemo() {
                 LIVE DEMO
               </div>
               <h1 style={{ fontSize: "clamp(28px, 4.5vw, 44px)", fontWeight: 700, lineHeight: 1.15, letterSpacing: "-0.8px", marginBottom: 14, color: T.text }}>
-                From inbox to ERP<br />
-                <span style={{ color: T.accent }}>in one click.</span>
+                Your team re-keys orders<br />
+                <span style={{ color: T.accent }}>40 hours a week.</span>
               </h1>
-              <p style={{ fontSize: 16, color: T.textSecondary, maxWidth: 520, margin: "0 auto", lineHeight: 1.65 }}>
-                Flora AI reads every order from every channel — fax, email, spreadsheet, or chat — matches it to your catalog, and delivers a verified sales order ready to book. No re-keying. No delays.
+              <p style={{ fontSize: 16, color: T.textSecondary, maxWidth: 540, margin: "0 auto", lineHeight: 1.65 }}>
+                Manual order entry burns labor, delays fulfillment, and lets errors slip through to the warehouse floor. Flora AI reads every order from every channel and delivers a verified sales order — ready to book in your ERP.
               </p>
             </div>
 
@@ -2032,16 +2035,119 @@ export default function FloraDemo() {
             {/* Stats */}
             <div style={{ marginTop: 48, display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(155px, 1fr))", gap: 10 }}>
               {[
-                { value: "60-80%", label: "Less manual order entry" },
-                { value: "$250K+", label: "Labor cost savings annually" },
-                { value: "$200K+", label: "Preventable error & chargeback impact" },
-                { value: "<10%", label: "Orders require human intervention" },
+                { value: "60-80%", label: "Reduction in manual order entry", context: "Avg. across teams processing 200\u20131,000 orders/week" },
+                { value: "$250K+", label: "Annual labor cost savings", context: "For a 10-person order desk handling 500 orders/week" },
+                { value: "$200K+", label: "Prevented error & chargeback costs", context: "Based on industry avg. 2\u20135% order error rate" },
+                { value: "<10%", label: "Of orders need human review", context: "After 30 days of learning your catalog" },
               ].map(stat => (
                 <div key={stat.label} style={{ padding: "20px 16px", borderRadius: T.radius, background: T.surface, border: `1px solid ${T.border}`, textAlign: "center" }}>
                   <div style={{ fontFamily: T.fontMono, fontSize: 24, fontWeight: 800, color: T.accent, marginBottom: 4 }}>{stat.value}</div>
-                  <div style={{ fontSize: 12, color: T.textTertiary }}>{stat.label}</div>
+                  <div style={{ fontSize: 12, color: T.textSecondary, fontWeight: 500, marginBottom: 6 }}>{stat.label}</div>
+                  <div style={{ fontSize: 11, color: T.textTertiary, lineHeight: 1.4 }}>{stat.context}</div>
                 </div>
               ))}
+            </div>
+
+            {/* Social proof strip */}
+            <div style={{
+              marginTop: 40, padding: "24px 20px",
+              borderRadius: T.radius, background: T.surface,
+              border: `1px solid ${T.border}`, textAlign: "center",
+            }}>
+              <p style={{
+                fontSize: 12, fontWeight: 600, color: T.textTertiary,
+                letterSpacing: "0.5px", textTransform: "uppercase",
+                fontFamily: T.fontMono, marginBottom: 16,
+              }}>
+                Built for food manufacturing teams processing 300–500 orders a week
+              </p>
+              <div style={{
+                display: "flex", alignItems: "center", justifyContent: "center",
+                gap: 24, flexWrap: "wrap",
+              }}>
+                {[
+                  { icon: "\uD83C\uDFED", text: "Mid-market manufacturers" },
+                  { icon: "\uD83D\uDD12", text: "SOC 2 compliant" },
+                  { icon: "\uD83D\uDCE6", text: "Multi-channel intake" },
+                  { icon: "\u26A1", text: "Live in under 2 weeks" },
+                ].map(item => (
+                  <div key={item.text} style={{
+                    display: "flex", alignItems: "center", gap: 6,
+                    fontSize: 13, color: T.textSecondary, fontWeight: 500,
+                  }}>
+                    <span style={{ fontSize: 14 }}>{item.icon}</span>
+                    {item.text}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Integration context */}
+            <div style={{
+              marginTop: 24, padding: "24px 20px",
+              borderRadius: T.radius, background: T.surface,
+              border: `1px solid ${T.border}`,
+            }}>
+              <div style={{ textAlign: "center", marginBottom: 20 }}>
+                <p style={{ fontSize: 15, fontWeight: 700, color: T.text, marginBottom: 4 }}>
+                  Fits your stack. Not the other way around.
+                </p>
+                <p style={{ fontSize: 13, color: T.textSecondary, maxWidth: 480, margin: "0 auto", lineHeight: 1.6 }}>
+                  Flora connects to your existing ERP and email systems. No rip-and-replace.
+                </p>
+              </div>
+              <div style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
+                gap: 10,
+              }}>
+                {[
+                  { label: "ERP Systems", items: "SAP, NetSuite, Dynamics, Sage" },
+                  { label: "Order Channels", items: "Email, Portal, Chat, Web Forms" },
+                  { label: "File Formats", items: "PDF, Excel, CSV, Images, Text" },
+                  { label: "Connectivity", items: "REST API, SFTP, Webhooks" },
+                ].map(group => (
+                  <div key={group.label} style={{
+                    padding: "16px 14px", borderRadius: T.radiusSm,
+                    background: T.bg, border: `1px solid ${T.borderLight}`,
+                  }}>
+                    <div style={{
+                      fontFamily: T.fontMono, fontSize: 10, fontWeight: 700,
+                      color: T.accent, letterSpacing: "0.5px",
+                      textTransform: "uppercase", marginBottom: 6,
+                    }}>
+                      {group.label}
+                    </div>
+                    <div style={{ fontSize: 12, color: T.textSecondary, lineHeight: 1.5 }}>
+                      {group.items}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Bottom CTA */}
+            <div style={{
+              marginTop: 40, textAlign: "center",
+              padding: "32px 20px",
+              borderRadius: T.radiusLg,
+              background: T.accentLight,
+              border: `1px solid #BFDBFE`,
+            }}>
+              <div style={{ fontSize: 18, fontWeight: 700, color: T.text, marginBottom: 8 }}>
+                Ready to stop re-keying orders?
+              </div>
+              <p style={{ fontSize: 14, color: T.textSecondary, marginBottom: 20, maxWidth: 420, margin: "0 auto 20px" }}>
+                See Flora process your real orders in a 30-minute walkthrough with your team.
+              </p>
+              <button style={{
+                ...btnBase, padding: "14px 36px", borderRadius: T.radius,
+                background: T.accent, color: "#fff", fontWeight: 700, fontSize: 14,
+                boxShadow: `0 1px 3px ${T.accent}40`,
+              }}
+                onMouseEnter={e => { e.target.style.background = T.accentDark; e.target.style.boxShadow = `0 4px 12px ${T.accent}30`; }}
+                onMouseLeave={e => { e.target.style.background = T.accent; e.target.style.boxShadow = `0 1px 3px ${T.accent}40`; }}
+              >Get Started with Flora →</button>
             </div>
           </>
       </main>
