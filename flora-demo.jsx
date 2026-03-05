@@ -2178,7 +2178,7 @@ export default function FloraDemo() {
               </div>
               <div style={{
                 display: "grid",
-                gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))",
+                gridTemplateColumns: "repeat(3, 1fr)",
                 gap: 20,
               }}>
                 {[
