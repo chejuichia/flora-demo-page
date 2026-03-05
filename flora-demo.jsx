@@ -642,7 +642,7 @@ const draftLabelStyle = {
   textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 5, display: "block",
 };
 
-function DraftSalesOrder({ draftOrder, setDraftOrder, catalog, onHighlight, extractionData, validationItems, repeatOrderInfo, xrefMappings }) {
+function DraftSalesOrder({ draftOrder, setDraftOrder, catalog, onHighlight, extractionData, validationItems, repeatOrderInfo, xrefMappings, isUserUpload }) {
   const updateHeader = (field, value) => setDraftOrder(prev => ({ ...prev, header: { ...prev.header, [field]: value } }));
   const updateShipping = (field, value) => setDraftOrder(prev => ({ ...prev, shipping: { ...prev.shipping, [field]: value } }));
   const updateLineItem = (id, field, value) => setDraftOrder(prev => ({
@@ -738,6 +738,25 @@ function DraftSalesOrder({ draftOrder, setDraftOrder, catalog, onHighlight, extr
         <span style={{ fontFamily: T.fontMono, fontSize: 11, color: T.textTertiary }}>SO-{new Date().getFullYear()}-DRAFT</span>
       </div>
 
+      {/* Catalog connection banner for user uploads */}
+      {isUserUpload && (
+        <div style={{
+          padding: "14px 16px", borderRadius: T.radius,
+          background: T.accentLight, border: `1px solid #BFDBFE`,
+          display: "flex", alignItems: "flex-start", gap: 10,
+        }}>
+          <span style={{ fontSize: 16, flexShrink: 0, marginTop: 1 }}>&#128218;</span>
+          <div>
+            <div style={{ fontSize: 13, fontWeight: 600, color: T.text, marginBottom: 4 }}>
+              SKUs shown are extracted as-is — your catalog isn't connected yet
+            </div>
+            <div style={{ fontSize: 12, color: T.textSecondary, lineHeight: 1.5 }}>
+              In production, Flora maps every line item to your ERP catalog, auto-matches SKUs, resolves ambiguities, and fills pricing. We connect to your systems and go live in under 2 weeks.
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ── Primary Information ── */}
       <div>
         <div style={{ ...draftLabelStyle, marginBottom: 10, fontSize: 10 }}>Primary Information</div>
@@ -832,31 +851,39 @@ function DraftSalesOrder({ draftOrder, setDraftOrder, catalog, onHighlight, extr
                   >
                     <td style={{ padding: "8px 10px", color: T.textTertiary, fontFamily: T.fontMono, fontSize: 11, width: 32 }}>{li.id}</td>
                     <td style={{ padding: "8px 6px", minWidth: 200 }} onMouseEnter={() => hl([origItem?.sku, li.catalogSku, origItem?.description].filter(Boolean))} onMouseLeave={clearHl}>
-                      <select style={{ ...draftSelectStyle, fontSize: 11, padding: "5px 6px" }} value={li.catalogSku} onChange={e => handleSkuChange(li.id, e.target.value)}>
-                        <option value="">-- Select Item --</option>
-                        {(() => {
-                          const suggestions = suggestionsPerLine[i] || [];
-                          if (suggestions.length > 0) {
-                            // Ensure the currently selected SKU is in the list even if it wasn't a top match
-                            const skus = new Set(suggestions.map(s => s.sku));
-                            const extra = li.catalogSku && !skus.has(li.catalogSku) ? catalog.find(c => c.sku === li.catalogSku) : null;
-                            return (
-                              <>
-                                {extra && <option key={extra.sku} value={extra.sku}>{extra.sku} — {extra.name}</option>}
-                                {suggestions.map(c => <option key={c.sku} value={c.sku}>{c.sku} — {c.name}</option>)}
-                              </>
-                            );
-                          }
-                          // Fallback: no extraction data — show full catalog
-                          return Object.entries(CATALOG_BY_CATEGORY).map(([cat, items]) => (
-                            <optgroup key={cat} label={cat}>
-                              {items.map(c => <option key={c.sku} value={c.sku}>{c.sku} — {c.name}</option>)}
-                            </optgroup>
-                          ));
-                        })()}
-                      </select>
-                      {li._customerCode && <div style={{ fontSize: 9, color: T.purple, marginTop: 2, fontFamily: T.fontMono }}>🔗 {li._customerCode}</div>}
-                      {li._substitution && <div style={{ fontSize: 9, color: T.accent, marginTop: 2, fontFamily: T.fontMono }}>⇄ from {li._substitution.originalSku}</div>}
+                      {isUserUpload ? (
+                        <div>
+                          <div style={{ fontSize: 11, fontFamily: T.fontMono, color: T.textSecondary, padding: "5px 8px", background: T.bg, borderRadius: T.radiusSm, border: `1px solid ${T.borderLight}` }}>
+                            {origItem?.sku || <span style={{ color: T.textTertiary, fontStyle: "italic" }}>Pending catalog match</span>}
+                          </div>
+                        </div>
+                      ) : (
+                        <>
+                          <select style={{ ...draftSelectStyle, fontSize: 11, padding: "5px 6px" }} value={li.catalogSku} onChange={e => handleSkuChange(li.id, e.target.value)}>
+                            <option value="">-- Select Item --</option>
+                            {(() => {
+                              const suggestions = suggestionsPerLine[i] || [];
+                              if (suggestions.length > 0) {
+                                const skus = new Set(suggestions.map(s => s.sku));
+                                const extra = li.catalogSku && !skus.has(li.catalogSku) ? catalog.find(c => c.sku === li.catalogSku) : null;
+                                return (
+                                  <>
+                                    {extra && <option key={extra.sku} value={extra.sku}>{extra.sku} — {extra.name}</option>}
+                                    {suggestions.map(c => <option key={c.sku} value={c.sku}>{c.sku} — {c.name}</option>)}
+                                  </>
+                                );
+                              }
+                              return Object.entries(CATALOG_BY_CATEGORY).map(([cat, items]) => (
+                                <optgroup key={cat} label={cat}>
+                                  {items.map(c => <option key={c.sku} value={c.sku}>{c.sku} — {c.name}</option>)}
+                                </optgroup>
+                              ));
+                            })()}
+                          </select>
+                          {li._customerCode && <div style={{ fontSize: 9, color: T.purple, marginTop: 2, fontFamily: T.fontMono }}>🔗 {li._customerCode}</div>}
+                          {li._substitution && <div style={{ fontSize: 9, color: T.accent, marginTop: 2, fontFamily: T.fontMono }}>⇄ from {li._substitution.originalSku}</div>}
+                        </>
+                      )}
                     </td>
                     <td style={{ padding: "8px 6px", minWidth: 160 }} onMouseEnter={() => hl([origItem?.description, li.description].filter(Boolean))} onMouseLeave={clearHl}>
                       <input style={{ ...draftInputStyle, fontSize: 12, padding: "5px 8px" }} value={li.description} onChange={e => updateLineItem(li.id, "description", e.target.value)} />
@@ -1123,7 +1150,7 @@ function HighlightedRawInput({ text, terms, scrollRef }) {
 
 // ─── Results View ───────────────────────────────────────────────────────────
 
-function ResultsView({ data, onHighlight, onGetStarted }) {
+function ResultsView({ data, onHighlight, onGetStarted, onTryOwn, isUserUpload }) {
   if (!data) return null;
   const { customer, po_reference, order_date, delivery, line_items, flags, totals, validation_items, memo: extractedMemo } = data;
   const hl = (terms) => onHighlight?.(terms);
@@ -1248,6 +1275,7 @@ function ResultsView({ data, onHighlight, onGetStarted }) {
           validationItems={valItems}
           repeatOrderInfo={repeatOrderInfo}
           xrefMappings={xrefMappings}
+          isUserUpload={isUserUpload}
         />
       )}
 
@@ -1487,6 +1515,25 @@ function ResultsView({ data, onHighlight, onGetStarted }) {
         )}
       </div>
 
+      {/* Try your own order */}
+      {onTryOwn && (
+        <button onClick={onTryOwn} style={{
+          display: "flex", alignItems: "center", gap: 12, width: "100%", padding: "18px 20px",
+          borderRadius: T.radius, background: T.accentLight, border: `1px solid #BFDBFE`,
+          cursor: "pointer", fontFamily: T.font, transition: "all 0.15s ease",
+        }}
+          onMouseEnter={e => { e.currentTarget.style.background = "#DBEAFE"; e.currentTarget.style.borderColor = T.accent; }}
+          onMouseLeave={e => { e.currentTarget.style.background = T.accentLight; e.currentTarget.style.borderColor = "#BFDBFE"; }}
+        >
+          <span style={{ fontSize: 18 }}>&#9889;</span>
+          <div style={{ textAlign: "left" }}>
+            <div style={{ fontWeight: 700, fontSize: 14, color: T.accent }}>Try Flora AI with your own order</div>
+            <div style={{ fontSize: 12, color: T.textSecondary, marginTop: 2 }}>Paste your own PO text or upload a file to see it processed</div>
+          </div>
+          <span style={{ fontSize: 16, color: T.accent, marginLeft: "auto" }}>→</span>
+        </button>
+      )}
+
       {/* CTA */}
       <div style={{ background: T.surface, borderRadius: T.radiusLg, border: `1px solid ${T.accent}`, padding: 28, position: "relative", overflow: "hidden", boxShadow: `0 0 0 1px ${T.accent}10` }}>
         <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 3, background: `linear-gradient(90deg, ${T.accent}, ${T.accentDark})` }} />
@@ -1528,6 +1575,7 @@ export default function FloraDemo() {
   const [uploadedText, setUploadedText] = useState("");
   const [uploadedFileName, setUploadedFileName] = useState("");
   const [uploadedFileData, setUploadedFileData] = useState(null); // { base64, mediaType }
+  const [isUserUpload, setIsUserUpload] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
@@ -1936,34 +1984,16 @@ export default function FloraDemo() {
 
               {/* ── Right Panel: Automation Pipeline ── */}
               <div style={{ maxWidth: rawInputText ? "none" : 920, margin: rawInputText ? 0 : "0 auto", width: "100%" }}>
-                <ResultsView data={result} onHighlight={setHighlightTerms} onGetStarted={handleGetStarted} />
+                <ResultsView data={result} onHighlight={setHighlightTerms} onGetStarted={handleGetStarted} onTryOwn={() => setShowTryOwn(true)} isUserUpload={isUserUpload} />
               </div>
             </div>
 
-            {/* ── Try Flora AI with Your Order CTA ── */}
+            {/* ── Try Flora AI with Your Order Form ── */}
+            {showTryOwn && (
             <div style={{
               maxWidth: 720, margin: "0 auto", padding: "0 24px 80px",
               animation: "offade 0.4s ease",
             }}>
-              {!showTryOwn ? (
-                <button onClick={() => setShowTryOwn(true)} style={{
-                  ...btnBase, width: "100%", padding: "20px 24px",
-                  borderRadius: T.radiusLg, background: T.accentLight,
-                  border: `1px solid #BFDBFE`,
-                  display: "flex", alignItems: "center", justifyContent: "center", gap: 12,
-                  transition: "all 0.2s ease",
-                }}
-                  onMouseEnter={e => { e.currentTarget.style.background = "#DBEAFE"; e.currentTarget.style.borderColor = T.accent; }}
-                  onMouseLeave={e => { e.currentTarget.style.background = T.accentLight; e.currentTarget.style.borderColor = "#BFDBFE"; }}
-                >
-                  <span style={{ fontSize: 20 }}>&#9889;</span>
-                  <div style={{ textAlign: "left" }}>
-                    <div style={{ fontWeight: 700, fontSize: 15, color: T.accent }}>Try Flora AI with Your Order</div>
-                    <div style={{ fontSize: 12, color: T.textSecondary, marginTop: 2 }}>Paste your own PO text or upload a file to see it processed</div>
-                  </div>
-                  <span style={{ fontSize: 18, color: T.accent, marginLeft: "auto" }}>→</span>
-                </button>
-              ) : (
                 <div style={{
                   borderRadius: T.radiusLg, background: T.surface,
                   border: `1px solid ${T.border}`, overflow: "hidden",
@@ -2035,7 +2065,7 @@ export default function FloraDemo() {
                         onFocus={e => e.target.style.borderColor = T.accent}
                         onBlur={e => e.target.style.borderColor = T.border}
                       />
-                      <button onClick={() => { if (pasteText.trim()) { setShowTryOwn(false); setTryOwnMode(null); extractOrder(pasteText, "Pasted text"); } }}
+                      <button onClick={() => { if (pasteText.trim()) { setShowTryOwn(false); setTryOwnMode(null); setIsUserUpload(true); extractOrder(pasteText, "Pasted text"); } }}
                         disabled={!pasteText.trim()}
                         style={{ ...btnBase, width: "100%", padding: 14, borderRadius: T.radius, background: pasteText.trim() ? T.accent : "#E7E5E4", color: pasteText.trim() ? "#fff" : T.textTertiary, fontWeight: 700, fontSize: 14, cursor: pasteText.trim() ? "pointer" : "not-allowed" }}
                       >Extract & Match to Catalog →</button>
@@ -2077,7 +2107,7 @@ export default function FloraDemo() {
                               {uploadedText.slice(0, 2000)}{uploadedText.length > 2000 && "\n… (truncated)"}
                             </pre>
                           </div>
-                          <button onClick={() => { if (uploadedText.trim()) { setShowTryOwn(false); setTryOwnMode(null); extractOrder(uploadedFileData ? "" : uploadedText, uploadedFileName, null, uploadedFileData); } }}
+                          <button onClick={() => { if (uploadedText.trim()) { setShowTryOwn(false); setTryOwnMode(null); setIsUserUpload(true); extractOrder(uploadedFileData ? "" : uploadedText, uploadedFileName, null, uploadedFileData); } }}
                             style={{ ...btnBase, width: "100%", padding: 14, borderRadius: T.radius, background: T.accent, color: "#fff", fontWeight: 700, fontSize: 14 }}
                             onMouseEnter={e => { e.target.style.background = T.accentDark; }}
                             onMouseLeave={e => { e.target.style.background = T.accent; }}
@@ -2087,8 +2117,8 @@ export default function FloraDemo() {
                     </div>
                   )}
                 </div>
-              )}
             </div>
+            )}
             </>
           )}
         </div>
@@ -2184,7 +2214,7 @@ export default function FloraDemo() {
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(165px, 1fr))", gap: 12 }}>
               {SAMPLE_ORDERS.map(s => (
                 <button key={s.id}
-                  onClick={() => extractOrder(s.content, s.label, s.image)}
+                  onClick={() => { setIsUserUpload(false); extractOrder(s.content, s.label, s.image); }}
                   onMouseEnter={() => setHoveredSample(s.id)}
                   onMouseLeave={() => setHoveredSample(null)}
                   style={{
@@ -2399,6 +2429,24 @@ export default function FloraDemo() {
                 onMouseEnter={e => { e.target.style.background = T.accentDark; e.target.style.boxShadow = `0 4px 12px ${T.accent}30`; }}
                 onMouseLeave={e => { e.target.style.background = T.accent; e.target.style.boxShadow = `0 1px 3px ${T.accent}40`; }}
               >Get Started with Flora →</button>
+              <div style={{ marginTop: 16, paddingTop: 16, borderTop: "1px solid #BFDBFE" }}>
+                <button onClick={() => {
+                  setShowTryOwn(true);
+                  document.getElementById("try-flora")?.scrollIntoView({ behavior: "smooth", block: "start" });
+                }} style={{
+                  ...btnBase, display: "flex", alignItems: "center", gap: 8,
+                  padding: "10px 16px", borderRadius: T.radius,
+                  background: "rgba(255,255,255,0.6)", border: `1px solid #BFDBFE`,
+                  fontSize: 13, fontWeight: 600, color: T.accent,
+                  transition: "all 0.15s ease",
+                }}
+                  onMouseEnter={e => { e.currentTarget.style.background = "#fff"; e.currentTarget.style.borderColor = T.accent; }}
+                  onMouseLeave={e => { e.currentTarget.style.background = "rgba(255,255,255,0.6)"; e.currentTarget.style.borderColor = "#BFDBFE"; }}
+                >
+                  <span style={{ fontSize: 14 }}>&#9889;</span>
+                  Or try Flora with your own order →
+                </button>
+              </div>
             </div>
         </main>
       </>
