@@ -1870,11 +1870,12 @@ export default function FloraDemo() {
             <div className="flora-split-panel" style={{
               maxWidth: 1400, margin: "0 auto", padding: "16px 24px 40px",
               display: "grid",
-              gridTemplateColumns: "minmax(0, 2fr) minmax(0, 3fr)",
+              gridTemplateColumns: rawInputText ? "minmax(0, 2fr) minmax(0, 3fr)" : "1fr",
               gap: 24,
               alignItems: "start",
             }}>
-              {/* ── Left Panel: Original Input ── */}
+              {/* ── Left Panel: Original Input (only for sample orders) ── */}
+              {rawInputText && (
               <div className="flora-left-panel" style={{ position: "sticky", top: 72 }}>
                 <div style={{
                   background: T.surface, borderRadius: T.radiusLg,
@@ -1932,9 +1933,10 @@ export default function FloraDemo() {
                   </div>
                 </div>
               </div>
+              )}
 
               {/* ── Right Panel: Automation Pipeline ── */}
-              <div>
+              <div style={{ maxWidth: rawInputText ? "none" : 920, margin: rawInputText ? 0 : "0 auto", width: "100%" }}>
                 <ResultsView data={result} onHighlight={setHighlightTerms} onGetStarted={handleGetStarted} />
               </div>
             </div>
