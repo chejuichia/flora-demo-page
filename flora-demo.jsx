@@ -2133,11 +2133,44 @@ export default function FloraDemo() {
           </div>
         </section>
 
+        {/* Section nav */}
+        <nav style={{
+          borderBottom: `1px solid ${T.border}`,
+          background: T.bg,
+          position: "sticky", top: 56, zIndex: 40,
+        }}>
+          <div style={{
+            maxWidth: 920, margin: "0 auto", padding: "0 20px",
+            display: "flex", gap: 0, overflow: "auto",
+          }}>
+            {[
+              { label: "Try Flora", id: "try-flora" },
+              { label: "Features", id: "features" },
+              { label: "Value", id: "value" },
+              { label: "Integrations", id: "integrations" },
+              { label: "Get Started", id: "get-started" },
+            ].map(item => (
+              <a key={item.id} href={`#${item.id}`}
+                onClick={e => { e.preventDefault(); document.getElementById(item.id)?.scrollIntoView({ behavior: "smooth", block: "start" }); }}
+                style={{
+                  ...btnBase, padding: "14px 20px",
+                  fontSize: 13, fontWeight: 600, color: T.textSecondary,
+                  textDecoration: "none", whiteSpace: "nowrap",
+                  borderBottom: "2px solid transparent",
+                  transition: "color 0.15s ease, border-color 0.15s ease",
+                }}
+                onMouseEnter={e => { e.target.style.color = T.accent; e.target.style.borderBottomColor = T.accent; }}
+                onMouseLeave={e => { e.target.style.color = T.textSecondary; e.target.style.borderBottomColor = "transparent"; }}
+              >{item.label}</a>
+            ))}
+          </div>
+        </nav>
+
         {/* Content below hero — centered narrow layout */}
         <main style={{ maxWidth: 920, margin: "0 auto", padding: "40px 20px 80px" }}>
 
             {/* Bridge text */}
-            <div style={{ textAlign: "center", marginBottom: 24 }}>
+            <div id="try-flora" style={{ textAlign: "center", marginBottom: 24, scrollMarginTop: 120 }}>
               <p style={{
                 fontSize: 14, color: T.textSecondary, fontWeight: 600,
                 display: "inline-flex", alignItems: "center", gap: 8,
@@ -2203,7 +2236,7 @@ export default function FloraDemo() {
             </div>
 
             {/* Features */}
-            <div style={{ marginTop: 56 }}>
+            <div id="features" style={{ marginTop: 56, scrollMarginTop: 120 }}>
               <div style={{ textAlign: "center", marginBottom: 32 }}>
                 <h2 style={{ fontSize: 22, fontWeight: 700, color: T.text, letterSpacing: "-0.3px", marginBottom: 8 }}>
                   Explore what's possible with Flora
@@ -2259,7 +2292,7 @@ export default function FloraDemo() {
             </div>
 
             {/* Stats */}
-            <div style={{ marginTop: 48, display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(155px, 1fr))", gap: 10 }}>
+            <div id="value" style={{ marginTop: 48, scrollMarginTop: 120, display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(155px, 1fr))", gap: 10 }}>
               {[
                 { value: "60-80%", label: "Reduction in manual order entry", context: "Avg. across teams processing 200\u20131,000 orders/week" },
                 { value: "$250K+", label: "Annual labor cost savings", context: "For a 10-person order desk handling 500 orders/week" },
@@ -2309,8 +2342,8 @@ export default function FloraDemo() {
             </div>
 
             {/* Integration context */}
-            <div style={{
-              marginTop: 24, padding: "24px 20px",
+            <div id="integrations" style={{
+              marginTop: 24, padding: "24px 20px", scrollMarginTop: 120,
               borderRadius: T.radius, background: T.surface,
               border: `1px solid ${T.border}`,
             }}>
@@ -2353,8 +2386,8 @@ export default function FloraDemo() {
             </div>
 
             {/* Bottom CTA */}
-            <div style={{
-              marginTop: 40, textAlign: "center",
+            <div id="get-started" style={{
+              marginTop: 40, textAlign: "center", scrollMarginTop: 120,
               padding: "32px 20px",
               borderRadius: T.radiusLg,
               background: T.accentLight,
