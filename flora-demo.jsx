@@ -2166,6 +2166,62 @@ export default function FloraDemo() {
               ))}
             </div>
 
+            {/* Features */}
+            <div style={{ marginTop: 56 }}>
+              <div style={{ textAlign: "center", marginBottom: 32 }}>
+                <h2 style={{ fontSize: 22, fontWeight: 700, color: T.text, letterSpacing: "-0.3px", marginBottom: 8 }}>
+                  What Flora does with every order
+                </h2>
+                <p style={{ fontSize: 14, color: T.textSecondary, maxWidth: 480, margin: "0 auto", lineHeight: 1.6 }}>
+                  From raw input to ERP-ready draft — automatically.
+                </p>
+              </div>
+              <div style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))",
+                gap: 20,
+              }}>
+                {[
+                  {
+                    icon: "\uD83D\uDCE8",
+                    title: "Multi-format intake",
+                    desc: "Reads orders from email, PDF, spreadsheet, chat, or image — no templates, no formatting requirements.",
+                  },
+                  {
+                    icon: "\uD83D\uDD17",
+                    title: "Customer code cross-referencing",
+                    desc: "Maps your customers' item codes to your internal SKUs automatically. No manual lookup tables.",
+                  },
+                  {
+                    icon: "\u2696\uFE0F",
+                    title: "Smart validation",
+                    desc: "Flags vague dates, approximate quantities, and missing fields — makes its best guess, but always asks before submitting.",
+                  },
+                  {
+                    icon: "\uD83D\uDD04",
+                    title: "Repeat order intelligence",
+                    desc: "Recognizes returning customers and shows what changed — new items, quantity shifts, dropped products — at a glance.",
+                  },
+                  {
+                    icon: "\uD83D\uDCCB",
+                    title: "Fulfillment-ready memo",
+                    desc: "Distills scattered notes and special instructions into a clean action list your warehouse team can act on immediately.",
+                  },
+                  {
+                    icon: "\u26A1",
+                    title: "ERP-ready draft in seconds",
+                    desc: "Generates a complete sales order — customer, line items, matched SKUs, pricing, shipping — ready to review and book.",
+                  },
+                ].map(f => (
+                  <div key={f.title} style={{ padding: "20px 0" }}>
+                    <div style={{ fontSize: 24, marginBottom: 10 }}>{f.icon}</div>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: T.text, marginBottom: 6 }}>{f.title}</div>
+                    <div style={{ fontSize: 13, color: T.textSecondary, lineHeight: 1.6 }}>{f.desc}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
             {/* Stats */}
             <div style={{ marginTop: 48, display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(155px, 1fr))", gap: 10 }}>
               {[
