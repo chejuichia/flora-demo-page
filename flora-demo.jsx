@@ -1527,6 +1527,7 @@ export default function FloraDemo() {
   const [pasteText, setPasteText] = useState("");
   const [uploadedText, setUploadedText] = useState("");
   const [uploadedFileName, setUploadedFileName] = useState("");
+  const [uploadedFileData, setUploadedFileData] = useState(null); // { base64, mediaType }
   const [isProcessing, setIsProcessing] = useState(false);
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
@@ -1567,7 +1568,7 @@ export default function FloraDemo() {
 
   const handleGetStarted = () => setShowQualify(true);
 
-  const extractOrder = useCallback(async (text, source, image) => {
+  const extractOrder = useCallback(async (text, source, image, fileData) => {
     setIsProcessing(true);
     setResult(null);
     setError(null);
@@ -1575,13 +1576,22 @@ export default function FloraDemo() {
     setProcessingImage(image || null);
     setRawInputText(text);
     try {
+      let messageContent;
+      if (fileData) {
+        const block = fileData.mediaType === "application/pdf"
+          ? { type: "document", source: { type: "base64", media_type: fileData.mediaType, data: fileData.base64 } }
+          : { type: "image", source: { type: "base64", media_type: fileData.mediaType, data: fileData.base64 } };
+        messageContent = [block, { type: "text", text: EXTRACTION_PROMPT + "\n[See attached document]" }];
+      } else {
+        messageContent = EXTRACTION_PROMPT + text;
+      }
       const response = await fetch("/api/anthropic", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           model: "claude-sonnet-4-20250514",
           max_tokens: 4000,
-          messages: [{ role: "user", content: EXTRACTION_PROMPT + text }],
+          messages: [{ role: "user", content: messageContent }],
         }),
       });
       if (!response.ok) {
@@ -1620,13 +1630,19 @@ export default function FloraDemo() {
     const file = e.target.files?.[0];
     if (!file) return;
     setUploadedFileName(file.name);
-    setResult(null);
-    setError(null);
+    setUploadedFileData(null);
     try {
-      if (file.type.startsWith("image/")) {
-        setUploadedText(`[IMAGE: ${file.name}] — In production, OCR extracts text from images. For this demo, paste the order text or try a sample.`);
-      } else if (file.type === "application/pdf") {
-        setUploadedText(`[PDF: ${file.name}] — In production, PDFs are parsed server-side. For this demo, paste the content as text or try a sample.`);
+      if (file.type.startsWith("image/") || file.type === "application/pdf") {
+        const base64 = await new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result.split(",")[1]);
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        });
+        setUploadedFileData({ base64, mediaType: file.type });
+        setUploadedText(file.type === "application/pdf"
+          ? `PDF uploaded: ${file.name} — Ready to process`
+          : `Image uploaded: ${file.name} — Ready to process`);
       } else {
         setUploadedText(await file.text());
       }
@@ -1644,6 +1660,7 @@ export default function FloraDemo() {
     setPasteText("");
     setUploadedText("");
     setUploadedFileName("");
+    setUploadedFileData(null);
     setShowTryOwn(false);
     setTryOwnMode(null);
     if (fileInputRef.current) fileInputRef.current.value = "";
@@ -2059,7 +2076,7 @@ export default function FloraDemo() {
                               {uploadedText.slice(0, 2000)}{uploadedText.length > 2000 && "\n… (truncated)"}
                             </pre>
                           </div>
-                          <button onClick={() => { if (uploadedText.trim()) { setShowTryOwn(false); setTryOwnMode(null); extractOrder(uploadedText, uploadedFileName); } }}
+                          <button onClick={() => { if (uploadedText.trim()) { setShowTryOwn(false); setTryOwnMode(null); extractOrder(uploadedFileData ? "" : uploadedText, uploadedFileName, null, uploadedFileData); } }}
                             style={{ ...btnBase, width: "100%", padding: 14, borderRadius: T.radius, background: T.accent, color: "#fff", fontWeight: 700, fontSize: 14 }}
                             onMouseEnter={e => { e.target.style.background = T.accentDark; }}
                             onMouseLeave={e => { e.target.style.background = T.accent; }}
