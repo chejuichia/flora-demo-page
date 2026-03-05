@@ -1123,7 +1123,7 @@ function HighlightedRawInput({ text, terms, scrollRef }) {
 
 // ─── Results View ───────────────────────────────────────────────────────────
 
-function ResultsView({ data, onHighlight }) {
+function ResultsView({ data, onHighlight, onGetStarted }) {
   if (!data) return null;
   const { customer, po_reference, order_date, delivery, line_items, flags, totals, validation_items, memo: extractedMemo } = data;
   const hl = (terms) => onHighlight?.(terms);
@@ -1492,18 +1492,22 @@ function ResultsView({ data, onHighlight }) {
         <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 3, background: `linear-gradient(90deg, ${T.accent}, ${T.accentDark})` }} />
         <div style={{ textAlign: "center", maxWidth: 540, margin: "0 auto" }}>
           <div style={{ fontSize: 20, fontWeight: 700, color: T.text, marginBottom: 8 }}>
-            See what happens when this runs on autopilot
+            Now imagine this on every order, every day
           </div>
           <div style={{ fontSize: 14, color: T.textSecondary, lineHeight: 1.7, marginBottom: 24 }}>
-            You just saw extraction, catalog matching, and smart validation. Flora also learns your customers' ordering patterns, auto-resolves ambiguities from order history, and drafts directly into your ERP — with every incomplete field flagged, never assumed.
+            You just saw extraction, catalog matching, and smart validation on a single order. In production, Flora processes hundreds per day — learning your customers' patterns, auto-resolving ambiguities, and drafting directly into your ERP.
           </div>
           <button
+            onClick={onGetStarted}
             style={{ padding: "14px 40px", borderRadius: T.radius, background: T.accent, color: "#fff", fontWeight: 700, fontSize: 14, border: "none", cursor: "pointer", boxShadow: `0 1px 3px ${T.accent}40`, transition: "all 0.15s ease", fontFamily: T.font }}
             onMouseEnter={e => { e.target.style.background = T.accentDark; e.target.style.boxShadow = `0 4px 12px ${T.accent}30`; }}
             onMouseLeave={e => { e.target.style.background = T.accent; e.target.style.boxShadow = `0 1px 3px ${T.accent}40`; }}
           >
-            Start 14-Day Free Trial →
+            Book a Demo with Your Team →
           </button>
+          <p style={{ fontSize: 12, color: T.textTertiary, marginTop: 12 }}>
+            30-minute walkthrough. Bring your ops team. We'll use your real orders.
+          </p>
         </div>
       </div>
     </div>
@@ -1516,9 +1520,14 @@ function ResultsView({ data, onHighlight }) {
 export default function FloraDemo() {
   const [activeTab, setActiveTab] = useState("samples");
   const [hoveredSample, setHoveredSample] = useState(null);
+  const [showTryOwn, setShowTryOwn] = useState(false);
+  const [tryOwnMode, setTryOwnMode] = useState(null); // "paste" | "upload"
+  const [showQualify, setShowQualify] = useState(false);
+  const [qualifyAnswers, setQualifyAnswers] = useState({ volume: "", erp: "", pain: "" });
   const [pasteText, setPasteText] = useState("");
   const [uploadedText, setUploadedText] = useState("");
   const [uploadedFileName, setUploadedFileName] = useState("");
+  const [uploadedFileData, setUploadedFileData] = useState(null); // { base64, mediaType }
   const [isProcessing, setIsProcessing] = useState(false);
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
@@ -1529,7 +1538,37 @@ export default function FloraDemo() {
   const rawInputScrollRef = useRef(null);
   const [highlightTerms, setHighlightTerms] = useState([]);
 
-  const extractOrder = useCallback(async (text, source, image) => {
+  // Load Calendly widget script
+  useEffect(() => {
+    if (document.querySelector('script[src*="calendly.com"]')) return;
+    const s = document.createElement("script");
+    s.src = "https://assets.calendly.com/assets/external/widget.js";
+    s.async = true;
+    document.head.appendChild(s);
+    const link = document.createElement("link");
+    link.href = "https://assets.calendly.com/assets/external/widget.css";
+    link.rel = "stylesheet";
+    document.head.appendChild(link);
+  }, []);
+
+  const openCalendly = () => {
+    const q = qualifyAnswers;
+    const params = new URLSearchParams({
+      utm_source: "flora_demo",
+      utm_content: [q.volume, q.erp, q.pain].filter(Boolean).join(" | "),
+    });
+    if (window.Calendly) {
+      window.Calendly.initPopupWidget({
+        url: `https://calendly.com/juichia1982/30min?${params.toString()}`,
+      });
+    }
+    setShowQualify(false);
+    setQualifyAnswers({ volume: "", erp: "", pain: "" });
+  };
+
+  const handleGetStarted = () => setShowQualify(true);
+
+  const extractOrder = useCallback(async (text, source, image, fileData) => {
     setIsProcessing(true);
     setResult(null);
     setError(null);
@@ -1537,13 +1576,22 @@ export default function FloraDemo() {
     setProcessingImage(image || null);
     setRawInputText(text);
     try {
+      let messageContent;
+      if (fileData) {
+        const block = fileData.mediaType === "application/pdf"
+          ? { type: "document", source: { type: "base64", media_type: fileData.mediaType, data: fileData.base64 } }
+          : { type: "image", source: { type: "base64", media_type: fileData.mediaType, data: fileData.base64 } };
+        messageContent = [block, { type: "text", text: EXTRACTION_PROMPT + "\n[See attached document]" }];
+      } else {
+        messageContent = EXTRACTION_PROMPT + text;
+      }
       const response = await fetch("/api/anthropic", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           model: "claude-sonnet-4-20250514",
           max_tokens: 4000,
-          messages: [{ role: "user", content: EXTRACTION_PROMPT + text }],
+          messages: [{ role: "user", content: messageContent }],
         }),
       });
       if (!response.ok) {
@@ -1582,13 +1630,19 @@ export default function FloraDemo() {
     const file = e.target.files?.[0];
     if (!file) return;
     setUploadedFileName(file.name);
-    setResult(null);
-    setError(null);
+    setUploadedFileData(null);
     try {
-      if (file.type.startsWith("image/")) {
-        setUploadedText(`[IMAGE: ${file.name}] — In production, OCR extracts text from images. For this demo, paste the order text or try a sample.`);
-      } else if (file.type === "application/pdf") {
-        setUploadedText(`[PDF: ${file.name}] — In production, PDFs are parsed server-side. For this demo, paste the content as text or try a sample.`);
+      if (file.type.startsWith("image/") || file.type === "application/pdf") {
+        const base64 = await new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result.split(",")[1]);
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        });
+        setUploadedFileData({ base64, mediaType: file.type });
+        setUploadedText(file.type === "application/pdf"
+          ? `PDF uploaded: ${file.name} — Ready to process`
+          : `Image uploaded: ${file.name} — Ready to process`);
       } else {
         setUploadedText(await file.text());
       }
@@ -1606,6 +1660,9 @@ export default function FloraDemo() {
     setPasteText("");
     setUploadedText("");
     setUploadedFileName("");
+    setUploadedFileData(null);
+    setShowTryOwn(false);
+    setTryOwnMode(null);
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
@@ -1661,15 +1718,116 @@ export default function FloraDemo() {
           <span style={{ fontWeight: 700, fontSize: 17, color: T.text, letterSpacing: "-0.3px" }}>Flora</span>
           <span style={{ fontSize: 11, color: T.textTertiary, fontWeight: 500, letterSpacing: "0.3px", borderLeft: `1px solid ${T.border}`, paddingLeft: 8 }}>Order Intelligence</span>
         </div>
-        <button style={{
+        <button onClick={handleGetStarted} style={{
           ...btnBase, padding: "8px 20px", borderRadius: T.radiusSm,
           background: T.accent, color: "#fff", fontWeight: 600, fontSize: 13,
           boxShadow: `0 1px 2px ${T.accent}30`,
         }}
           onMouseEnter={e => { e.target.style.background = T.accentDark; }}
           onMouseLeave={e => { e.target.style.background = T.accent; }}
-        >Start Free Trial</button>
+        >Get Started with Flora</button>
       </header>
+
+      {/* ── Qualifying Modal ── */}
+      {showQualify && (
+        <div style={{
+          position: "fixed", inset: 0, zIndex: 100,
+          background: "rgba(0,0,0,0.4)", backdropFilter: "blur(4px)",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          padding: 20, animation: "offade 0.2s ease",
+        }} onClick={e => { if (e.target === e.currentTarget) setShowQualify(false); }}>
+          <div style={{
+            background: T.surface, borderRadius: T.radiusLg,
+            border: `1px solid ${T.border}`, width: "100%", maxWidth: 480,
+            boxShadow: "0 20px 60px rgba(0,0,0,0.15)",
+            animation: "offade 0.25s ease",
+          }}>
+            {/* Modal header */}
+            <div style={{ padding: "20px 24px 16px", borderBottom: `1px solid ${T.borderLight}` }}>
+              <div style={{ fontSize: 18, fontWeight: 700, color: T.text, marginBottom: 4 }}>
+                Get Started with Flora
+              </div>
+              <div style={{ fontSize: 13, color: T.textSecondary, lineHeight: 1.5 }}>
+                Help us prepare a walkthrough tailored to your operation.
+              </div>
+            </div>
+
+            {/* Questions */}
+            <div style={{ padding: "20px 24px", display: "flex", flexDirection: "column", gap: 18 }}>
+              {/* Q1: Order volume */}
+              <div>
+                <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: T.textSecondary, marginBottom: 6, fontFamily: T.fontMono, letterSpacing: "0.3px" }}>
+                  How many orders does your team process per week?
+                </label>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                  {["Under 100", "100–300", "300–500", "500–1,000", "1,000+"].map(opt => (
+                    <button key={opt} onClick={() => setQualifyAnswers(a => ({ ...a, volume: opt }))} style={{
+                      ...btnBase, padding: "8px 14px", borderRadius: T.radiusSm, fontSize: 12, fontWeight: 600,
+                      background: qualifyAnswers.volume === opt ? T.accentLight : T.bg,
+                      color: qualifyAnswers.volume === opt ? T.accent : T.textSecondary,
+                      border: `1px solid ${qualifyAnswers.volume === opt ? T.accent : T.border}`,
+                    }}>{opt}</button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Q2: ERP system */}
+              <div>
+                <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: T.textSecondary, marginBottom: 6, fontFamily: T.fontMono, letterSpacing: "0.3px" }}>
+                  Which ERP system do you use?
+                </label>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                  {["NetSuite", "SAP", "Dynamics 365", "Sage", "QuickBooks", "Other"].map(opt => (
+                    <button key={opt} onClick={() => setQualifyAnswers(a => ({ ...a, erp: opt }))} style={{
+                      ...btnBase, padding: "8px 14px", borderRadius: T.radiusSm, fontSize: 12, fontWeight: 600,
+                      background: qualifyAnswers.erp === opt ? T.accentLight : T.bg,
+                      color: qualifyAnswers.erp === opt ? T.accent : T.textSecondary,
+                      border: `1px solid ${qualifyAnswers.erp === opt ? T.accent : T.border}`,
+                    }}>{opt}</button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Q3: Primary pain */}
+              <div>
+                <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: T.textSecondary, marginBottom: 6, fontFamily: T.fontMono, letterSpacing: "0.3px" }}>
+                  What's your biggest order entry challenge?
+                </label>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                  {["Manual re-keying takes too long", "Order errors & mis-ships", "Can't scale without adding headcount", "Too many order formats & channels"].map(opt => (
+                    <button key={opt} onClick={() => setQualifyAnswers(a => ({ ...a, pain: opt }))} style={{
+                      ...btnBase, padding: "8px 14px", borderRadius: T.radiusSm, fontSize: 12, fontWeight: 600,
+                      background: qualifyAnswers.pain === opt ? T.accentLight : T.bg,
+                      color: qualifyAnswers.pain === opt ? T.accent : T.textSecondary,
+                      border: `1px solid ${qualifyAnswers.pain === opt ? T.accent : T.border}`,
+                    }}>{opt}</button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Modal footer */}
+            <div style={{ padding: "16px 24px 20px", borderTop: `1px solid ${T.borderLight}`, display: "flex", gap: 10, justifyContent: "flex-end" }}>
+              <button onClick={() => setShowQualify(false)} style={{
+                ...btnBase, padding: "10px 20px", borderRadius: T.radiusSm,
+                background: T.bg, color: T.textSecondary, fontSize: 13, fontWeight: 600,
+                border: `1px solid ${T.border}`,
+              }}>Cancel</button>
+              <button onClick={openCalendly}
+                disabled={!qualifyAnswers.volume || !qualifyAnswers.erp || !qualifyAnswers.pain}
+                style={{
+                  ...btnBase, padding: "10px 24px", borderRadius: T.radiusSm,
+                  background: (qualifyAnswers.volume && qualifyAnswers.erp && qualifyAnswers.pain) ? T.accent : "#E7E5E4",
+                  color: (qualifyAnswers.volume && qualifyAnswers.erp && qualifyAnswers.pain) ? "#fff" : T.textTertiary,
+                  fontSize: 13, fontWeight: 700,
+                  cursor: (qualifyAnswers.volume && qualifyAnswers.erp && qualifyAnswers.pain) ? "pointer" : "not-allowed",
+                }}>
+                Book Your Walkthrough →
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── Main ── */}
 
@@ -1708,14 +1866,16 @@ export default function FloraDemo() {
           )}
 
           {result && (
+            <>
             <div className="flora-split-panel" style={{
-              maxWidth: 1400, margin: "0 auto", padding: "16px 24px 80px",
+              maxWidth: 1400, margin: "0 auto", padding: "16px 24px 40px",
               display: "grid",
-              gridTemplateColumns: "minmax(0, 2fr) minmax(0, 3fr)",
+              gridTemplateColumns: rawInputText ? "minmax(0, 2fr) minmax(0, 3fr)" : "1fr",
               gap: 24,
               alignItems: "start",
             }}>
-              {/* ── Left Panel: Original Input ── */}
+              {/* ── Left Panel: Original Input (only for sample orders) ── */}
+              {rawInputText && (
               <div className="flora-left-panel" style={{ position: "sticky", top: 72 }}>
                 <div style={{
                   background: T.surface, borderRadius: T.radiusLg,
@@ -1773,191 +1933,476 @@ export default function FloraDemo() {
                   </div>
                 </div>
               </div>
+              )}
 
               {/* ── Right Panel: Automation Pipeline ── */}
-              <div>
-                <ResultsView data={result} onHighlight={setHighlightTerms} />
+              <div style={{ maxWidth: rawInputText ? "none" : 920, margin: rawInputText ? 0 : "0 auto", width: "100%" }}>
+                <ResultsView data={result} onHighlight={setHighlightTerms} onGetStarted={handleGetStarted} />
               </div>
             </div>
-          )}
-        </div>
-      ) : (
 
-      /* Input State — centered narrow layout */
-      <main style={{ maxWidth: 920, margin: "0 auto", padding: "40px 20px 80px" }}>
-          <>
-            {/* Hero */}
-            <div style={{ textAlign: "center", marginBottom: 44 }}>
-              <div style={{
-                display: "inline-flex", alignItems: "center", gap: 6,
-                padding: "4px 14px", borderRadius: 999,
-                background: T.accentLight, border: `1px solid #BFDBFE`,
-                fontFamily: T.fontMono, fontSize: 11, fontWeight: 600,
-                color: T.accent, letterSpacing: "0.5px", marginBottom: 20,
-              }}>
-                <span style={{ width: 6, height: 6, borderRadius: "50%", background: T.green, animation: "ofpulse 2s ease-in-out infinite" }} />
-                LIVE DEMO
-              </div>
-              <h1 style={{ fontSize: "clamp(28px, 4.5vw, 44px)", fontWeight: 700, lineHeight: 1.15, letterSpacing: "-0.8px", marginBottom: 14, color: T.text }}>
-                From inbox to ERP<br />
-                <span style={{ color: T.accent }}>in one click.</span>
-              </h1>
-              <p style={{ fontSize: 16, color: T.textSecondary, maxWidth: 520, margin: "0 auto", lineHeight: 1.65 }}>
-                Flora AI reads every order from every channel — fax, email, spreadsheet, or chat — matches it to your catalog, and delivers a verified sales order ready to book. No re-keying. No delays.
-              </p>
-            </div>
-
-            {/* Tabs */}
+            {/* ── Try Flora AI with Your Order CTA ── */}
             <div style={{
-              display: "flex", gap: 2, background: T.surface,
-              borderRadius: T.radius, padding: 3,
-              border: `1px solid ${T.border}`, marginBottom: 20,
+              maxWidth: 720, margin: "0 auto", padding: "0 24px 80px",
+              animation: "offade 0.4s ease",
             }}>
-              {tabs.map(tab => (
-                <button key={tab.id} onClick={() => setActiveTab(tab.id)} style={{
-                  ...btnBase, flex: 1, padding: "11px 16px", borderRadius: 8,
-                  background: activeTab === tab.id ? T.accentLight : "transparent",
-                  color: activeTab === tab.id ? T.accent : T.textTertiary,
-                  fontWeight: 600, fontSize: 13,
-                  display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
-                  border: activeTab === tab.id ? `1px solid #BFDBFE` : "1px solid transparent",
-                }}>
-                  <span style={{ fontSize: 14 }}>{tab.icon}</span> {tab.label}
-                </button>
-              ))}
-            </div>
-
-            {/* Tab Content */}
-            <div style={{ animation: "offade 0.2s ease" }}>
-
-              {/* Samples */}
-              {activeTab === "samples" && (
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(165px, 1fr))", gap: 10, marginBottom: 20 }}>
-                  {SAMPLE_ORDERS.map(s => (
-                    <button key={s.id}
-                      onClick={() => extractOrder(s.content, s.label, s.image)}
-                      onMouseEnter={() => setHoveredSample(s.id)}
-                      onMouseLeave={() => setHoveredSample(null)}
-                      style={{
-                        ...btnBase, padding: 0, borderRadius: T.radius, textAlign: "left",
-                        border: `1px solid ${hoveredSample === s.id ? T.accent : T.border}`,
-                        background: T.surface,
-                        display: "flex", flexDirection: "column", overflow: "hidden",
-                        position: "relative", transition: "border-color 0.15s ease, box-shadow 0.15s ease",
-                        boxShadow: hoveredSample === s.id ? `0 2px 8px ${T.accent}20` : "none",
-                      }}>
-                      {s.image ? (
-                        <div style={{ width: "100%", height: 100, overflow: "hidden", borderBottom: `1px solid ${T.borderLight}`, background: "#F5F5F4" }}>
-                          <img src={s.image} alt={s.label} style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "top", opacity: 0.85 }} />
-                        </div>
-                      ) : (
-                        <div style={{ padding: "14px 14px 0" }}>
-                          <span style={{ fontSize: 22 }}>{s.icon}</span>
-                        </div>
-                      )}
-                      <div style={{ padding: s.image ? "10px 14px 14px" : "8px 14px 14px", display: "flex", flexDirection: "column", gap: 4 }}>
-                        <span style={{ fontWeight: 700, fontSize: 13, color: T.text }}>{s.label}</span>
-                        <span style={{ fontSize: 12, color: T.textTertiary, lineHeight: 1.4 }}>{s.description}</span>
-                      </div>
-                      {/* Hover overlay */}
-                      {hoveredSample === s.id && (
-                        <div style={{
-                          position: "absolute", inset: 0, borderRadius: T.radius,
-                          background: "rgba(30, 58, 138, 0.75)",
-                          display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
-                          gap: 8, padding: 16, animation: "offade 0.15s ease",
-                        }}>
-                          <span style={{ fontSize: 24, lineHeight: 1 }}>▶</span>
-                          <span style={{ color: "#fff", fontSize: 12, fontWeight: 600, textAlign: "center", lineHeight: 1.4 }}>
-                            See AI prepare the<br />ERP draft
-                          </span>
-                        </div>
-                      )}
-                    </button>
-                  ))}
-                </div>
-              )}
-
-              {/* Paste */}
-              {activeTab === "paste" && (
-                <div>
-                  <textarea value={pasteText} onChange={e => setPasteText(e.target.value)}
-                    placeholder={"Paste an order email, chat message, or any unstructured text…\n\nExample: \"Hey, need 50 units of Widget A and 30 of Widget B to 123 Main St by Friday. PO# 12345.\""}
-                    style={{
-                      width: "100%", minHeight: 220, padding: 20,
-                      borderRadius: T.radius, border: `1px solid ${T.border}`,
-                      background: T.surface, color: T.text,
-                      fontFamily: T.fontMono, fontSize: 13, lineHeight: 1.7,
-                      resize: "vertical", marginBottom: 14,
-                    }}
-                    onFocus={e => e.target.style.borderColor = T.accent}
-                    onBlur={e => e.target.style.borderColor = T.border}
-                  />
-                  <button onClick={() => { if (pasteText.trim()) extractOrder(pasteText, "Pasted text"); }}
-                    disabled={!pasteText.trim()}
-                    style={{ ...btnBase, width: "100%", padding: 16, borderRadius: T.radius, background: pasteText.trim() ? T.accent : "#E7E5E4", color: pasteText.trim() ? "#fff" : T.textTertiary, fontWeight: 700, fontSize: 14, cursor: pasteText.trim() ? "pointer" : "not-allowed" }}
-                  >Extract & Match to Catalog →</button>
-                </div>
-              )}
-
-              {/* Upload */}
-              {activeTab === "upload" && (
-                <div>
-                  <div onClick={() => fileInputRef.current?.click()}
-                    onDragOver={e => { e.preventDefault(); e.currentTarget.style.borderColor = T.accent; }}
-                    onDragLeave={e => { e.currentTarget.style.borderColor = T.border; }}
-                    onDrop={e => {
-                      e.preventDefault(); e.currentTarget.style.borderColor = T.border;
-                      const f = e.dataTransfer.files?.[0];
-                      if (f && fileInputRef.current) { const dt = new DataTransfer(); dt.items.add(f); fileInputRef.current.files = dt.files; handleFileUpload({ target: fileInputRef.current }); }
-                    }}
-                    style={{
-                      padding: "48px 24px", borderRadius: T.radius,
-                      border: `2px dashed ${T.border}`, background: T.surface,
-                      cursor: "pointer", textAlign: "center", marginBottom: 14,
-                    }}
-                  >
-                    <input ref={fileInputRef} type="file" accept=".txt,.csv,.json,.xlsx,.xls,.pdf,.png,.jpg,.jpeg" onChange={handleFileUpload} style={{ display: "none" }} />
-                    <div style={{ fontSize: 36, marginBottom: 10 }}>📂</div>
-                    <div style={{ fontWeight: 600, fontSize: 14, color: T.text, marginBottom: 4 }}>
-                      {uploadedFileName || "Drop a file here, or click to browse"}
-                    </div>
-                    <div style={{ fontSize: 13, color: T.textTertiary }}>TXT, CSV, Excel, PDF, and image files</div>
+              {!showTryOwn ? (
+                <button onClick={() => setShowTryOwn(true)} style={{
+                  ...btnBase, width: "100%", padding: "20px 24px",
+                  borderRadius: T.radiusLg, background: T.accentLight,
+                  border: `1px solid #BFDBFE`,
+                  display: "flex", alignItems: "center", justifyContent: "center", gap: 12,
+                  transition: "all 0.2s ease",
+                }}
+                  onMouseEnter={e => { e.currentTarget.style.background = "#DBEAFE"; e.currentTarget.style.borderColor = T.accent; }}
+                  onMouseLeave={e => { e.currentTarget.style.background = T.accentLight; e.currentTarget.style.borderColor = "#BFDBFE"; }}
+                >
+                  <span style={{ fontSize: 20 }}>&#9889;</span>
+                  <div style={{ textAlign: "left" }}>
+                    <div style={{ fontWeight: 700, fontSize: 15, color: T.accent }}>Try Flora AI with Your Order</div>
+                    <div style={{ fontSize: 12, color: T.textSecondary, marginTop: 2 }}>Paste your own PO text or upload a file to see it processed</div>
                   </div>
-                  {uploadedText && (
-                    <div style={{ animation: "offade 0.2s ease" }}>
-                      <div style={{ background: T.surface, borderRadius: T.radius, border: `1px solid ${T.border}`, maxHeight: 180, overflow: "auto", marginBottom: 14 }}>
-                        <pre style={{ padding: 16, fontFamily: T.fontMono, fontSize: 12, color: T.textSecondary, lineHeight: 1.6, whiteSpace: "pre-wrap" }}>
-                          {uploadedText.slice(0, 2000)}{uploadedText.length > 2000 && "\n… (truncated)"}
-                        </pre>
-                      </div>
-                      <button onClick={() => { if (uploadedText.trim()) extractOrder(uploadedText, uploadedFileName); }}
-                        style={{ ...btnBase, width: "100%", padding: 16, borderRadius: T.radius, background: T.accent, color: "#fff", fontWeight: 700, fontSize: 14 }}
-                        onMouseEnter={e => { e.target.style.background = T.accentDark; }}
-                        onMouseLeave={e => { e.target.style.background = T.accent; }}
+                  <span style={{ fontSize: 18, color: T.accent, marginLeft: "auto" }}>→</span>
+                </button>
+              ) : (
+                <div style={{
+                  borderRadius: T.radiusLg, background: T.surface,
+                  border: `1px solid ${T.border}`, overflow: "hidden",
+                  animation: "offade 0.2s ease",
+                }}>
+                  {/* Header */}
+                  <div style={{
+                    padding: "16px 20px", borderBottom: `1px solid ${T.borderLight}`,
+                    display: "flex", alignItems: "center", justifyContent: "space-between",
+                  }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <span style={{ fontSize: 16 }}>&#9889;</span>
+                      <span style={{ fontWeight: 700, fontSize: 14, color: T.text }}>Try Flora AI with Your Order</span>
+                    </div>
+                    <button onClick={() => { setShowTryOwn(false); setTryOwnMode(null); }} style={{
+                      ...btnBase, padding: "4px 10px", borderRadius: T.radiusSm,
+                      background: T.surfaceHover, color: T.textTertiary, fontSize: 12, fontWeight: 600,
+                    }}>Close</button>
+                  </div>
+
+                  {/* Mode selection */}
+                  {!tryOwnMode && (
+                    <div style={{ padding: 20, display: "flex", gap: 12 }}>
+                      <button onClick={() => setTryOwnMode("paste")} style={{
+                        ...btnBase, flex: 1, padding: "24px 16px", borderRadius: T.radius,
+                        border: `1px solid ${T.border}`, background: T.bg,
+                        display: "flex", flexDirection: "column", alignItems: "center", gap: 8,
+                        transition: "all 0.15s ease",
+                      }}
+                        onMouseEnter={e => { e.currentTarget.style.borderColor = T.accent; e.currentTarget.style.background = T.accentLight; }}
+                        onMouseLeave={e => { e.currentTarget.style.borderColor = T.border; e.currentTarget.style.background = T.bg; }}
+                      >
+                        <span style={{ fontSize: 24 }}>&#9999;&#65039;</span>
+                        <span style={{ fontWeight: 700, fontSize: 13, color: T.text }}>Paste Text</span>
+                        <span style={{ fontSize: 11, color: T.textTertiary, lineHeight: 1.4, textAlign: "center" }}>Paste an email, chat, or PO text</span>
+                      </button>
+                      <button onClick={() => setTryOwnMode("upload")} style={{
+                        ...btnBase, flex: 1, padding: "24px 16px", borderRadius: T.radius,
+                        border: `1px solid ${T.border}`, background: T.bg,
+                        display: "flex", flexDirection: "column", alignItems: "center", gap: 8,
+                        transition: "all 0.15s ease",
+                      }}
+                        onMouseEnter={e => { e.currentTarget.style.borderColor = T.accent; e.currentTarget.style.background = T.accentLight; }}
+                        onMouseLeave={e => { e.currentTarget.style.borderColor = T.border; e.currentTarget.style.background = T.bg; }}
+                      >
+                        <span style={{ fontSize: 24 }}>&#128193;</span>
+                        <span style={{ fontWeight: 700, fontSize: 13, color: T.text }}>Upload File</span>
+                        <span style={{ fontSize: 11, color: T.textTertiary, lineHeight: 1.4, textAlign: "center" }}>TXT, CSV, Excel, PDF, or image</span>
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Paste mode */}
+                  {tryOwnMode === "paste" && (
+                    <div style={{ padding: 20 }}>
+                      <button onClick={() => setTryOwnMode(null)} style={{
+                        ...btnBase, padding: "4px 0", marginBottom: 12,
+                        background: "none", color: T.textTertiary, fontSize: 12, fontWeight: 600,
+                      }}>← Back</button>
+                      <textarea value={pasteText} onChange={e => setPasteText(e.target.value)}
+                        placeholder={"Paste an order email, chat message, or any unstructured text…\n\nExample: \"Hey, need 50 units of Widget A and 30 of Widget B to 123 Main St by Friday. PO# 12345.\""}
+                        style={{
+                          width: "100%", minHeight: 180, padding: 16,
+                          borderRadius: T.radius, border: `1px solid ${T.border}`,
+                          background: T.bg, color: T.text,
+                          fontFamily: T.fontMono, fontSize: 13, lineHeight: 1.7,
+                          resize: "vertical", marginBottom: 12,
+                        }}
+                        onFocus={e => e.target.style.borderColor = T.accent}
+                        onBlur={e => e.target.style.borderColor = T.border}
+                      />
+                      <button onClick={() => { if (pasteText.trim()) { setShowTryOwn(false); setTryOwnMode(null); extractOrder(pasteText, "Pasted text"); } }}
+                        disabled={!pasteText.trim()}
+                        style={{ ...btnBase, width: "100%", padding: 14, borderRadius: T.radius, background: pasteText.trim() ? T.accent : "#E7E5E4", color: pasteText.trim() ? "#fff" : T.textTertiary, fontWeight: 700, fontSize: 14, cursor: pasteText.trim() ? "pointer" : "not-allowed" }}
                       >Extract & Match to Catalog →</button>
+                    </div>
+                  )}
+
+                  {/* Upload mode */}
+                  {tryOwnMode === "upload" && (
+                    <div style={{ padding: 20 }}>
+                      <button onClick={() => setTryOwnMode(null)} style={{
+                        ...btnBase, padding: "4px 0", marginBottom: 12,
+                        background: "none", color: T.textTertiary, fontSize: 12, fontWeight: 600,
+                      }}>← Back</button>
+                      <div onClick={() => fileInputRef.current?.click()}
+                        onDragOver={e => { e.preventDefault(); e.currentTarget.style.borderColor = T.accent; }}
+                        onDragLeave={e => { e.currentTarget.style.borderColor = T.border; }}
+                        onDrop={e => {
+                          e.preventDefault(); e.currentTarget.style.borderColor = T.border;
+                          const f = e.dataTransfer.files?.[0];
+                          if (f && fileInputRef.current) { const dt = new DataTransfer(); dt.items.add(f); fileInputRef.current.files = dt.files; handleFileUpload({ target: fileInputRef.current }); }
+                        }}
+                        style={{
+                          padding: "36px 24px", borderRadius: T.radius,
+                          border: `2px dashed ${T.border}`, background: T.bg,
+                          cursor: "pointer", textAlign: "center", marginBottom: 12,
+                        }}
+                      >
+                        <input ref={fileInputRef} type="file" accept=".txt,.csv,.json,.xlsx,.xls,.pdf,.png,.jpg,.jpeg" onChange={handleFileUpload} style={{ display: "none" }} />
+                        <div style={{ fontSize: 32, marginBottom: 8 }}>&#128194;</div>
+                        <div style={{ fontWeight: 600, fontSize: 13, color: T.text, marginBottom: 4 }}>
+                          {uploadedFileName || "Drop a file here, or click to browse"}
+                        </div>
+                        <div style={{ fontSize: 12, color: T.textTertiary }}>TXT, CSV, Excel, PDF, and image files</div>
+                      </div>
+                      {uploadedText && (
+                        <div style={{ animation: "offade 0.2s ease" }}>
+                          <div style={{ background: T.bg, borderRadius: T.radius, border: `1px solid ${T.border}`, maxHeight: 160, overflow: "auto", marginBottom: 12 }}>
+                            <pre style={{ padding: 14, fontFamily: T.fontMono, fontSize: 12, color: T.textSecondary, lineHeight: 1.6, whiteSpace: "pre-wrap" }}>
+                              {uploadedText.slice(0, 2000)}{uploadedText.length > 2000 && "\n… (truncated)"}
+                            </pre>
+                          </div>
+                          <button onClick={() => { if (uploadedText.trim()) { setShowTryOwn(false); setTryOwnMode(null); extractOrder(uploadedFileData ? "" : uploadedText, uploadedFileName, null, uploadedFileData); } }}
+                            style={{ ...btnBase, width: "100%", padding: 14, borderRadius: T.radius, background: T.accent, color: "#fff", fontWeight: 700, fontSize: 14 }}
+                            onMouseEnter={e => { e.target.style.background = T.accentDark; }}
+                            onMouseLeave={e => { e.target.style.background = T.accent; }}
+                          >Extract & Match to Catalog →</button>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
               )}
             </div>
+            </>
+          )}
+        </div>
+      ) : (
 
-            {/* Stats */}
-            <div style={{ marginTop: 48, display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(155px, 1fr))", gap: 10 }}>
-              {[
-                { value: "60-80%", label: "Less manual order entry" },
-                { value: "$250K+", label: "Labor cost savings annually" },
-                { value: "$200K+", label: "Preventable error & chargeback impact" },
-                { value: "<10%", label: "Orders require human intervention" },
-              ].map(stat => (
-                <div key={stat.label} style={{ padding: "20px 16px", borderRadius: T.radius, background: T.surface, border: `1px solid ${T.border}`, textAlign: "center" }}>
-                  <div style={{ fontFamily: T.fontMono, fontSize: 24, fontWeight: 800, color: T.accent, marginBottom: 4 }}>{stat.value}</div>
-                  <div style={{ fontSize: 12, color: T.textTertiary }}>{stat.label}</div>
-                </div>
+      /* Input State */
+      <>
+        {/* Full-width Hero with background image */}
+        <section style={{
+          width: "100%",
+          minHeight: 340,
+          backgroundImage: "url('/hero-bg.jpg')",
+          backgroundSize: "cover",
+          backgroundPosition: "center top",
+          backgroundRepeat: "no-repeat",
+          display: "flex",
+          alignItems: "center",
+          position: "relative",
+        }}>
+          <div style={{
+            textAlign: "left",
+            maxWidth: 920,
+            margin: "0 auto",
+            width: "100%",
+            padding: "80px 20px 60px",
+            position: "relative",
+            zIndex: 1,
+          }}>
+            <p style={{
+              fontSize: 14, fontWeight: 600, color: T.accent,
+              letterSpacing: "0.3px", marginBottom: 12,
+            }}>
+              Flora Order Intelligence
+            </p>
+            <h1 style={{ fontSize: "clamp(28px, 4.5vw, 44px)", fontWeight: 700, lineHeight: 1.15, letterSpacing: "-0.8px", marginBottom: 16, color: T.text, maxWidth: 600 }}>
+              Scale order volume with instant, AI-powered order processing
+            </h1>
+            <p style={{ fontSize: 16, color: T.textSecondary, maxWidth: 520, lineHeight: 1.65 }}>
+              Flora reads orders from any channel and format, matches items to your catalog, and delivers verified, ERP-ready sales orders — without the re-keying.
+            </p>
+          </div>
+        </section>
+
+        {/* Section nav */}
+        <nav style={{
+          borderBottom: `1px solid ${T.border}`,
+          background: T.bg,
+          position: "sticky", top: 56, zIndex: 40,
+        }}>
+          <div style={{
+            maxWidth: 920, margin: "0 auto", padding: "0 20px",
+            display: "flex", gap: 0, overflow: "auto",
+          }}>
+            {[
+              { label: "Try Flora", id: "try-flora" },
+              { label: "Features", id: "features" },
+              { label: "Value", id: "value" },
+              { label: "Integrations", id: "integrations" },
+              { label: "Get Started", id: "get-started" },
+            ].map(item => (
+              <a key={item.id} href={`#${item.id}`}
+                onClick={e => { e.preventDefault(); document.getElementById(item.id)?.scrollIntoView({ behavior: "smooth", block: "start" }); }}
+                style={{
+                  ...btnBase, padding: "14px 20px",
+                  fontSize: 13, fontWeight: 600, color: T.textSecondary,
+                  textDecoration: "none", whiteSpace: "nowrap",
+                  borderBottom: "2px solid transparent",
+                  transition: "color 0.15s ease, border-color 0.15s ease",
+                }}
+                onMouseEnter={e => { e.target.style.color = T.accent; e.target.style.borderBottomColor = T.accent; }}
+                onMouseLeave={e => { e.target.style.color = T.textSecondary; e.target.style.borderBottomColor = "transparent"; }}
+              >{item.label}</a>
+            ))}
+          </div>
+        </nav>
+
+        {/* Content below hero — centered narrow layout */}
+        <main style={{ maxWidth: 920, margin: "0 auto", padding: "40px 20px 80px" }}>
+
+            {/* Try Flora section */}
+            <div id="try-flora" style={{ marginBottom: 24, scrollMarginTop: 120 }}>
+              <div style={{ marginBottom: 16 }}>
+                <h2 style={{ fontSize: 22, fontWeight: 700, color: T.text, letterSpacing: "-0.3px", marginBottom: 8 }}>
+                  See Flora in action
+                </h2>
+                <p style={{ fontSize: 14, color: T.textSecondary, maxWidth: 480, lineHeight: 1.6 }}>
+                  Pick a sample order below to watch Flora process it in real time
+                </p>
+              </div>
+            </div>
+
+            {/* Sample Order Cards */}
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(165px, 1fr))", gap: 12 }}>
+              {SAMPLE_ORDERS.map(s => (
+                <button key={s.id}
+                  onClick={() => extractOrder(s.content, s.label, s.image)}
+                  onMouseEnter={() => setHoveredSample(s.id)}
+                  onMouseLeave={() => setHoveredSample(null)}
+                  style={{
+                    ...btnBase, padding: 0, borderRadius: T.radius, textAlign: "left",
+                    border: `1px solid ${hoveredSample === s.id ? T.accent : T.border}`,
+                    background: T.surface,
+                    display: "flex", flexDirection: "column", overflow: "hidden",
+                    position: "relative", transition: "border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease",
+                    boxShadow: hoveredSample === s.id ? `0 4px 12px ${T.accent}25` : `0 1px 3px rgba(0,0,0,0.04)`,
+                    transform: hoveredSample === s.id ? "translateY(-2px)" : "none",
+                  }}>
+                  {s.image ? (
+                    <div style={{ width: "100%", height: 100, overflow: "hidden", borderBottom: `1px solid ${T.borderLight}`, background: "#F5F5F4" }}>
+                      <img src={s.image} alt={s.label} style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "top", opacity: 0.85 }} />
+                    </div>
+                  ) : (
+                    <div style={{ padding: "14px 14px 0" }}>
+                      <span style={{ fontSize: 22 }}>{s.icon}</span>
+                    </div>
+                  )}
+                  <div style={{ padding: s.image ? "10px 14px 6px" : "8px 14px 6px", display: "flex", flexDirection: "column", gap: 3 }}>
+                    <span style={{ fontWeight: 700, fontSize: 13, color: T.text }}>{s.label}</span>
+                    <span style={{ fontSize: 11, color: T.textTertiary, lineHeight: 1.4 }}>{s.description}</span>
+                  </div>
+                  {/* Persistent action label */}
+                  <div style={{
+                    padding: "8px 14px 12px",
+                    marginTop: "auto",
+                    display: "flex", alignItems: "center", gap: 5,
+                  }}>
+                    <span style={{
+                      fontSize: 11, fontWeight: 600,
+                      color: hoveredSample === s.id ? T.accent : T.textTertiary,
+                      transition: "color 0.15s ease",
+                    }}>
+                      Process this order
+                    </span>
+                    <span style={{
+                      fontSize: 12,
+                      color: hoveredSample === s.id ? T.accent : T.textTertiary,
+                      transition: "color 0.15s ease, transform 0.15s ease",
+                      transform: hoveredSample === s.id ? "translateX(2px)" : "none",
+                      display: "inline-block",
+                    }}>→</span>
+                  </div>
+                </button>
               ))}
             </div>
-          </>
-      </main>
+
+            {/* Features */}
+            <div id="features" style={{ marginTop: 56, scrollMarginTop: 120 }}>
+              <div style={{ marginBottom: 32 }}>
+                <h2 style={{ fontSize: 22, fontWeight: 700, color: T.text, letterSpacing: "-0.3px", marginBottom: 8 }}>
+                  Explore what's possible with Flora
+                </h2>
+                <p style={{ fontSize: 14, color: T.textSecondary, maxWidth: 480, lineHeight: 1.6 }}>
+                  What Flora does with every order
+                </p>
+              </div>
+              <div style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(3, 1fr)",
+                gap: 20,
+              }}>
+                {[
+                  {
+                    icon: "\uD83D\uDCE8",
+                    title: "Multi-format intake",
+                    desc: "Reads orders from email, PDF, spreadsheet, chat, or image — no templates, no formatting requirements.",
+                  },
+                  {
+                    icon: "\uD83D\uDD17",
+                    title: "Customer code cross-referencing",
+                    desc: "Maps your customers' item codes to your internal SKUs automatically. No manual lookup tables.",
+                  },
+                  {
+                    icon: "\u2696\uFE0F",
+                    title: "Smart validation",
+                    desc: "Flags vague dates, approximate quantities, and missing fields — makes its best guess, but always asks before submitting.",
+                  },
+                  {
+                    icon: "\uD83D\uDD04",
+                    title: "Repeat order intelligence",
+                    desc: "Recognizes returning customers and shows what changed — new items, quantity shifts, dropped products — at a glance.",
+                  },
+                  {
+                    icon: "\uD83D\uDCCB",
+                    title: "Fulfillment-ready memo",
+                    desc: "Distills scattered notes and special instructions into a clean action list your warehouse team can act on immediately.",
+                  },
+                  {
+                    icon: "\u26A1",
+                    title: "ERP-ready draft in seconds",
+                    desc: "Generates a complete sales order — customer, line items, matched SKUs, pricing, shipping — ready to review and book.",
+                  },
+                ].map(f => (
+                  <div key={f.title} style={{ padding: "20px 0" }}>
+                    <div style={{ fontSize: 24, marginBottom: 10 }}>{f.icon}</div>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: T.text, marginBottom: 6 }}>{f.title}</div>
+                    <div style={{ fontSize: 13, color: T.textSecondary, lineHeight: 1.6 }}>{f.desc}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Stats */}
+            <div id="value" style={{ marginTop: 48, scrollMarginTop: 120 }}>
+              <div style={{ marginBottom: 16 }}>
+                <h2 style={{ fontSize: 22, fontWeight: 700, color: T.text, letterSpacing: "-0.3px", marginBottom: 8 }}>
+                  The impact of automating order entry
+                </h2>
+                <p style={{ fontSize: 14, color: T.textSecondary, maxWidth: 480, lineHeight: 1.6 }}>
+                  What teams see after switching to Flora
+                </p>
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(155px, 1fr))", gap: 10 }}>
+                {[
+                  { value: "60-80%", label: "Reduction in manual order entry", context: "Avg. across teams processing 200\u20131,000 orders/week" },
+                  { value: "$250K+", label: "Annual labor cost savings", context: "For a 10-person order desk handling 500 orders/week" },
+                  { value: "$200K+", label: "Prevented error & chargeback costs", context: "Based on industry avg. 2\u20135% order error rate" },
+                  { value: "<10%", label: "Of orders need human review", context: "After 30 days of learning your catalog" },
+                ].map(stat => (
+                  <div key={stat.label} style={{ padding: "20px 16px", borderRadius: T.radius, background: T.surface, border: `1px solid ${T.border}` }}>
+                    <div style={{ fontFamily: T.fontMono, fontSize: 24, fontWeight: 800, color: T.accent, marginBottom: 4 }}>{stat.value}</div>
+                    <div style={{ fontSize: 12, color: T.textSecondary, fontWeight: 500, marginBottom: 6 }}>{stat.label}</div>
+                    <div style={{ fontSize: 11, color: T.textTertiary, lineHeight: 1.4 }}>{stat.context}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Integration context */}
+            <div id="integrations" style={{ marginTop: 24, scrollMarginTop: 120 }}>
+              <div style={{ marginBottom: 16 }}>
+                <h2 style={{ fontSize: 22, fontWeight: 700, color: T.text, letterSpacing: "-0.3px", marginBottom: 8 }}>
+                  Fits your stack. Not the other way around.
+                </h2>
+                <p style={{ fontSize: 14, color: T.textSecondary, maxWidth: 480, lineHeight: 1.6 }}>
+                  Flora connects to your existing ERP and email systems. No rip-and-replace.
+                </p>
+              </div>
+              <div style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
+                gap: 10,
+              }}>
+                {[
+                  { label: "ERP Systems", items: "SAP, NetSuite, Dynamics, Sage" },
+                  { label: "Order Channels", items: "Email, Portal, Chat, Web Forms" },
+                  { label: "File Formats", items: "PDF, Excel, CSV, Images, Text" },
+                  { label: "Connectivity", items: "REST API, SFTP, Webhooks" },
+                ].map(group => (
+                  <div key={group.label} style={{
+                    padding: "16px 14px", borderRadius: T.radiusSm,
+                    background: T.surface, border: `1px solid ${T.border}`,
+                  }}>
+                    <div style={{
+                      fontFamily: T.fontMono, fontSize: 13, fontWeight: 800,
+                      color: T.accent, letterSpacing: "0.5px",
+                      textTransform: "uppercase", marginBottom: 6,
+                    }}>
+                      {group.label}
+                    </div>
+                    <div style={{ fontSize: 12, color: T.textSecondary, lineHeight: 1.5 }}>
+                      {group.items}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Trust signals */}
+              <div style={{
+                marginTop: 20, paddingTop: 16,
+                borderTop: `1px solid ${T.border}`,
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
+                gap: 10,
+              }}>
+                {[
+                  { icon: "\uD83C\uDFED", label: "Mid-market manufacturers", desc: "Built for teams processing 300–500 orders/week" },
+                  { icon: "\uD83D\uDD12", label: "SOC 2 compliant", desc: "Enterprise-grade security and data handling" },
+                  { icon: "\uD83D\uDCE6", label: "Multi-channel intake", desc: "Email, fax, portal, chat — one workflow" },
+                  { icon: "\u26A1", label: "Live in under 2 weeks", desc: "Fast onboarding with your real orders" },
+                ].map(item => (
+                  <div key={item.label} style={{ padding: "12px 0" }}>
+                    <div style={{ fontSize: 14, marginBottom: 4 }}>{item.icon} <span style={{ fontWeight: 600, color: T.text, fontSize: 13 }}>{item.label}</span></div>
+                    <div style={{ fontSize: 12, color: T.textTertiary, lineHeight: 1.4 }}>{item.desc}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Bottom CTA */}
+            <div id="get-started" style={{
+              marginTop: 40, scrollMarginTop: 120,
+              padding: "32px 20px",
+              borderRadius: T.radiusLg,
+              background: T.accentLight,
+              border: `1px solid #BFDBFE`,
+            }}>
+              <div style={{ fontSize: 18, fontWeight: 700, color: T.text, marginBottom: 8 }}>
+                Ready to stop re-keying orders?
+              </div>
+              <p style={{ fontSize: 14, color: T.textSecondary, marginBottom: 20, maxWidth: 420 }}>
+                See Flora process your real orders in a 30-minute walkthrough with your team.
+              </p>
+              <button onClick={handleGetStarted} style={{
+                ...btnBase, padding: "14px 36px", borderRadius: T.radius,
+                background: T.accent, color: "#fff", fontWeight: 700, fontSize: 14,
+                boxShadow: `0 1px 3px ${T.accent}40`,
+              }}
+                onMouseEnter={e => { e.target.style.background = T.accentDark; e.target.style.boxShadow = `0 4px 12px ${T.accent}30`; }}
+                onMouseLeave={e => { e.target.style.background = T.accent; e.target.style.boxShadow = `0 1px 3px ${T.accent}40`; }}
+              >Get Started with Flora →</button>
+            </div>
+        </main>
+      </>
       )}
     </div>
   );
