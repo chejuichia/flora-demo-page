@@ -2169,16 +2169,16 @@ export default function FloraDemo() {
         {/* Content below hero — centered narrow layout */}
         <main style={{ maxWidth: 920, margin: "0 auto", padding: "40px 20px 80px" }}>
 
-            {/* Bridge text */}
-            <div id="try-flora" style={{ textAlign: "center", marginBottom: 24, scrollMarginTop: 120 }}>
-              <p style={{
-                fontSize: 14, color: T.textSecondary, fontWeight: 600,
-                display: "inline-flex", alignItems: "center", gap: 8,
-              }}>
-                <span style={{ color: T.accent, fontSize: 16 }}>&#8595;</span>
-                Pick any order below to see Flora process it in real time
-                <span style={{ color: T.accent, fontSize: 16 }}>&#8595;</span>
-              </p>
+            {/* Try Flora section */}
+            <div id="try-flora" style={{ marginBottom: 24, scrollMarginTop: 120 }}>
+              <div style={{ marginBottom: 16 }}>
+                <h2 style={{ fontSize: 22, fontWeight: 700, color: T.text, letterSpacing: "-0.3px", marginBottom: 8 }}>
+                  See Flora in action
+                </h2>
+                <p style={{ fontSize: 14, color: T.textSecondary, maxWidth: 480, lineHeight: 1.6 }}>
+                  Pick a sample order below to watch Flora process it in real time
+                </p>
+              </div>
             </div>
 
             {/* Sample Order Cards */}
@@ -2237,11 +2237,11 @@ export default function FloraDemo() {
 
             {/* Features */}
             <div id="features" style={{ marginTop: 56, scrollMarginTop: 120 }}>
-              <div style={{ textAlign: "center", marginBottom: 32 }}>
+              <div style={{ marginBottom: 32 }}>
                 <h2 style={{ fontSize: 22, fontWeight: 700, color: T.text, letterSpacing: "-0.3px", marginBottom: 8 }}>
                   Explore what's possible with Flora
                 </h2>
-                <p style={{ fontSize: 14, color: T.textSecondary, maxWidth: 480, margin: "0 auto", lineHeight: 1.6 }}>
+                <p style={{ fontSize: 14, color: T.textSecondary, maxWidth: 480, lineHeight: 1.6 }}>
                   What Flora does with every order
                 </p>
               </div>
@@ -2292,26 +2292,36 @@ export default function FloraDemo() {
             </div>
 
             {/* Stats */}
-            <div id="value" style={{ marginTop: 48, scrollMarginTop: 120, display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(155px, 1fr))", gap: 10 }}>
-              {[
-                { value: "60-80%", label: "Reduction in manual order entry", context: "Avg. across teams processing 200\u20131,000 orders/week" },
-                { value: "$250K+", label: "Annual labor cost savings", context: "For a 10-person order desk handling 500 orders/week" },
-                { value: "$200K+", label: "Prevented error & chargeback costs", context: "Based on industry avg. 2\u20135% order error rate" },
-                { value: "<10%", label: "Of orders need human review", context: "After 30 days of learning your catalog" },
-              ].map(stat => (
-                <div key={stat.label} style={{ padding: "20px 16px", borderRadius: T.radius, background: T.surface, border: `1px solid ${T.border}`, textAlign: "center" }}>
-                  <div style={{ fontFamily: T.fontMono, fontSize: 24, fontWeight: 800, color: T.accent, marginBottom: 4 }}>{stat.value}</div>
-                  <div style={{ fontSize: 12, color: T.textSecondary, fontWeight: 500, marginBottom: 6 }}>{stat.label}</div>
-                  <div style={{ fontSize: 11, color: T.textTertiary, lineHeight: 1.4 }}>{stat.context}</div>
-                </div>
-              ))}
+            <div id="value" style={{ marginTop: 48, scrollMarginTop: 120 }}>
+              <div style={{ marginBottom: 16 }}>
+                <h2 style={{ fontSize: 22, fontWeight: 700, color: T.text, letterSpacing: "-0.3px", marginBottom: 8 }}>
+                  The impact of automating order entry
+                </h2>
+                <p style={{ fontSize: 14, color: T.textSecondary, maxWidth: 480, lineHeight: 1.6 }}>
+                  What teams see after switching to Flora
+                </p>
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(155px, 1fr))", gap: 10 }}>
+                {[
+                  { value: "60-80%", label: "Reduction in manual order entry", context: "Avg. across teams processing 200\u20131,000 orders/week" },
+                  { value: "$250K+", label: "Annual labor cost savings", context: "For a 10-person order desk handling 500 orders/week" },
+                  { value: "$200K+", label: "Prevented error & chargeback costs", context: "Based on industry avg. 2\u20135% order error rate" },
+                  { value: "<10%", label: "Of orders need human review", context: "After 30 days of learning your catalog" },
+                ].map(stat => (
+                  <div key={stat.label} style={{ padding: "20px 16px", borderRadius: T.radius, background: T.surface, border: `1px solid ${T.border}` }}>
+                    <div style={{ fontFamily: T.fontMono, fontSize: 24, fontWeight: 800, color: T.accent, marginBottom: 4 }}>{stat.value}</div>
+                    <div style={{ fontSize: 12, color: T.textSecondary, fontWeight: 500, marginBottom: 6 }}>{stat.label}</div>
+                    <div style={{ fontSize: 11, color: T.textTertiary, lineHeight: 1.4 }}>{stat.context}</div>
+                  </div>
+                ))}
+              </div>
             </div>
 
             {/* Social proof strip */}
             <div style={{
               marginTop: 40, padding: "24px 20px",
               borderRadius: T.radius, background: T.surface,
-              border: `1px solid ${T.border}`, textAlign: "center",
+              border: `1px solid ${T.border}`,
             }}>
               <p style={{
                 fontSize: 12, fontWeight: 600, color: T.textTertiary,
@@ -2321,7 +2331,7 @@ export default function FloraDemo() {
                 Built for food manufacturing teams processing 300–500 orders a week
               </p>
               <div style={{
-                display: "flex", alignItems: "center", justifyContent: "center",
+                display: "flex", alignItems: "center",
                 gap: 24, flexWrap: "wrap",
               }}>
                 {[
@@ -2347,11 +2357,11 @@ export default function FloraDemo() {
               borderRadius: T.radius, background: T.surface,
               border: `1px solid ${T.border}`,
             }}>
-              <div style={{ textAlign: "center", marginBottom: 20 }}>
-                <p style={{ fontSize: 15, fontWeight: 700, color: T.text, marginBottom: 4 }}>
+              <div style={{ marginBottom: 16 }}>
+                <h2 style={{ fontSize: 22, fontWeight: 700, color: T.text, letterSpacing: "-0.3px", marginBottom: 8 }}>
                   Fits your stack. Not the other way around.
-                </p>
-                <p style={{ fontSize: 13, color: T.textSecondary, maxWidth: 480, margin: "0 auto", lineHeight: 1.6 }}>
+                </h2>
+                <p style={{ fontSize: 14, color: T.textSecondary, maxWidth: 480, lineHeight: 1.6 }}>
                   Flora connects to your existing ERP and email systems. No rip-and-replace.
                 </p>
               </div>
@@ -2387,7 +2397,7 @@ export default function FloraDemo() {
 
             {/* Bottom CTA */}
             <div id="get-started" style={{
-              marginTop: 40, textAlign: "center", scrollMarginTop: 120,
+              marginTop: 40, scrollMarginTop: 120,
               padding: "32px 20px",
               borderRadius: T.radiusLg,
               background: T.accentLight,
@@ -2396,7 +2406,7 @@ export default function FloraDemo() {
               <div style={{ fontSize: 18, fontWeight: 700, color: T.text, marginBottom: 8 }}>
                 Ready to stop re-keying orders?
               </div>
-              <p style={{ fontSize: 14, color: T.textSecondary, marginBottom: 20, maxWidth: 420, margin: "0 auto 20px" }}>
+              <p style={{ fontSize: 14, color: T.textSecondary, marginBottom: 20, maxWidth: 420 }}>
                 See Flora process your real orders in a 30-minute walkthrough with your team.
               </p>
               <button onClick={handleGetStarted} style={{
